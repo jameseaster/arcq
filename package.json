@@ -1,5 +1,5 @@
 {
-  "name": "arcq",
+  "name": "@leverstack/arcq",
   "version": "1.0.0",
   "description": "CLI for querying ArcGIS feature services",
   "main": "dist/index.js",
@@ -58,5 +58,8 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.18.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

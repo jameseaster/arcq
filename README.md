@@ -1,7 +1,7 @@
 # arcq
 
 [![CI](https://github.com/jameseaster/arcq/actions/workflows/lint-and-test.yml/badge.svg)](https://github.com/jameseaster/arcq/actions/workflows/lint-and-test.yml)
-[![npm version](https://img.shields.io/npm/v/arcq)](https://www.npmjs.com/package/arcq)
+[![npm version](https://img.shields.io/npm/v/%40leverstack%2Farcq)](https://www.npmjs.com/package/@leverstack/arcq)
 
 A fast CLI for querying ArcGIS feature services, designed to be driven by both humans and coding agents.
 
@@ -25,10 +25,10 @@ ArcGIS REST is awkward to drive from a terminal or a script: query strings are f
 Install globally from npm:
 
 ```bash
-npm install -g arcq
+npm install -g @leverstack/arcq
 ```
 
-`arcq` is now on your PATH.
+`arcq` is now on your PATH (the package is scoped; the command is still `arcq`).
 
 ### From source
 
