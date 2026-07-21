@@ -39,7 +39,7 @@
     "node": ">=18"
   },
   "bin": {
-    "arcq": "./dist/bin/arcq.js"
+    "arcq": "dist/bin/arcq.js"
   },
   "type": "module",
   "dependencies": {
