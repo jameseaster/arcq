@@ -10,8 +10,8 @@
 #   --dry-run  Print what would happen without creating or pushing the tag.
 #   --force    Move the tag if it already exists (re-point and force-push).
 #
-# The version is read from package.json. Tags are lightweight and named X.Y.Z
-# to match the repo history.
+# The version is read from package.json. Tags are annotated and named vX.Y.Z
+# to match the public release convention.
 
 set -euo pipefail
 
@@ -43,7 +43,7 @@ VERSION=$(npm --prefix "$ROOT_DIR" pkg get version | tr -d '"')
   echo "Could not read version from package.json." >&2
   exit 1
 }
-TAG="$VERSION"
+TAG="v$VERSION"
 echo "  package.json: $VERSION"
 
 # The tag must mark a commit that is really the release: nothing uncommitted,
@@ -77,11 +77,11 @@ if $GIT rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
     exit 1
   fi
   step "Move tag $TAG ($EXIST -> $HEAD_SHA)"
-  run $GIT tag -f "$TAG"
+  run $GIT tag -fa "$TAG" -m "arcq $VERSION."
   run $GIT push --force origin "$TAG"
 else
   step "Create tag $TAG at $HEAD_SHA"
-  run $GIT tag "$TAG"
+  run $GIT tag -a "$TAG" -m "arcq $VERSION."
   run $GIT push origin "$TAG"
 fi
 
