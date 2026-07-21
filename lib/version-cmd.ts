@@ -9,7 +9,7 @@ export function getVersion(): string {
   for (const rel of ['../package.json', '../../package.json']) {
     try {
       const pkg = require(rel) as { name?: string; version?: string };
-      if (pkg.name === 'arcq' && pkg.version) return pkg.version;
+      if (pkg.name === '@leverstack/arcq' && pkg.version) return pkg.version;
     } catch {
       // keep probing
     }
