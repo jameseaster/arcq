@@ -1,11 +1,12 @@
 {
   "name": "@leverstack/arcq",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "CLI for querying ArcGIS feature services",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "skills"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

@@ -72,9 +72,13 @@ npm run lint         # lint
 
 ## Using arcq with coding agents
 
-The repo ships a ready-made [Agent Skill](skills/arcq/SKILL.md) covering discovery, the quoting rule, output shaping, the exit-code contract, and TLS behavior. For Claude Code, install it with:
+The package ships a ready-made [Agent Skill](skills/arcq/SKILL.md) covering discovery, the quoting rule, output shaping, the exit-code contract, and TLS behavior. For Claude Code, install it with:
 
 ```bash
+# from an npm install
+cp -r "$(npm root -g)/@leverstack/arcq/skills/arcq" ~/.claude/skills/
+
+# or from a clone
 cp -r skills/arcq ~/.claude/skills/
 ```
 

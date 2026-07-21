@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.1] - 2026-07-21
+
+### Changed
+
+- The npm package now ships `skills/arcq/SKILL.md`, so the agent skill can be installed from a global npm install (`cp -r "$(npm root -g)/@leverstack/arcq/skills/arcq" ~/.claude/skills/`) without cloning the repo. The README documents both install paths.
+
 ## [1.0.0] - 2026-07-21
 
 Initial public release.
