@@ -49,8 +49,38 @@ arcq query <layer> "<where>" --out-fields a,b,c --limit 20 --quiet
 - `1` - error (bad where clause, unknown layer, server failure). The message
   on stderr says what went wrong; unknown layer names include closest-match
   suggestions.
-- `2` - token missing, invalid, or expired. Ask the user to run
-  `arcq token set <token>`, then retry.
+- `2` - token missing, invalid, or expired. First run `arcq token refresh`
+  and retry the command - if OAuth refresh is set up (see below) this mints a
+  fresh token with no user interaction. Only if `arcq token refresh` also
+  fails (it exits 2 with a `run: arcq token connect` hint when the refresh
+  credential itself has expired, or exits 1 when none is configured) should you
+  ask the user to run `arcq token connect` or `arcq token set <token>`.
+
+## OAuth refresh setup (optional, removes token friction)
+
+Access tokens on secured portals are short-lived, so instead of re-pasting one
+each time the user can connect a refresh credential once:
+
+```bash
+arcq token connect    # paste the esriJSAPIOAuth blob from an ArcGIS web app
+```
+
+The blob comes from the browser DevTools console on any ArcGIS web app the user
+is signed into: `copy(localStorage.getItem('esriJSAPIOAuth'))`. This works for
+IWA/SAML/PKI portals too, because the web app already performed the sign-in.
+
+For a setup where the secret never touches arcq's files, point it at a
+credential-helper command that prints the refresh token:
+
+```bash
+arcq token connect --command 'op read op://Vault/arcgis/refresh-token'
+```
+
+Once connected, `arcq token refresh` mints a fresh access token on demand, and
+query/list/fields commands auto-refresh once on an exit-2 before giving up.
+`arcq token show` reports the token expiry and whether refresh is configured
+(never the refresh token itself). Use `example.com` hosts and placeholder ids
+when demonstrating this to a user.
 
 ## TLS
 

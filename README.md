@@ -98,7 +98,8 @@ Prefer something lighter? Drop this into your agent's instructions (e.g. a `CLAU
   `--out-fields a,b,c` returns only those fields.
 - stdout is pure JSON (pipe to `jq`); the summary goes to stderr.
 - Exit codes: 0 = success (an empty `[]` is a valid answer), 1 = error,
-  2 = token invalid/expired (fix with `arcq token set <token>`).
+  2 = token invalid/expired (fix with `arcq token refresh`, or
+  `arcq token set <token>`).
 ```
 
 ## Security
@@ -121,7 +122,7 @@ Verification is relaxed only for arcq's own requests (via a scoped `https.Agent`
 
 Two more hardening details:
 
-- The auth token is stored at `~/.arcq-token` with file mode `600` (owner read/write only).
+- The auth token is stored at `~/.arcq-token` with file mode `600` (owner read/write only). OAuth refresh credentials (`~/.arcq-oauth.json`) and the token-expiry meta (`~/.arcq-token-meta.json`) are written `600` as well - see [Authentication](#authentication) for the trade-off between a stored refresh token and a `--command` credential helper.
 - Requests are sent as HTTP `POST` with form-encoded bodies, so the token is never placed in a URL query string where it would land in server or proxy access logs.
 
 ## Configuration
@@ -147,12 +148,62 @@ arcq reads a JSON config file from `~/.arcq.json` by default. Override the path 
 
 ## Authentication
 
+If a token is stored it is sent with every request. Unauthenticated services work without one. The token is sent in the request body, not the URL.
+
+### 1. Paste a token (baseline)
+
 ```bash
 arcq token set <token>  # save a token to ~/.arcq-token (mode 600)
-arcq token show  # print the stored token
+arcq token show         # print the stored token, its expiry, and refresh status
 ```
 
-If a token is stored it is sent with every request. Unauthenticated services work without one. The token is sent in the request body, not the URL.
+This is the simplest path and always works. The catch on secured portals is that tokens are short-lived, so you end up re-pasting.
+
+### 2. OAuth refresh (paste once, auto-refresh after)
+
+`arcq token connect` stores an OAuth refresh credential so arcq can mint fresh access tokens on its own - no re-pasting until the refresh token itself expires (portal-configured, ~2 weeks by default).
+
+Every ArcGIS JS API web app persists its OAuth credential in the browser. On a page of any ArcGIS web app you're signed into, open the DevTools console and copy it:
+
+```js
+copy(localStorage.getItem('esriJSAPIOAuth'));
+```
+
+Then paste it into arcq:
+
+```bash
+arcq token connect
+# Paste esriJSAPIOAuth JSON (or a bare refresh token): <paste>
+# Connected. Access token saved (expires ...); refresh credential good until ~...
+```
+
+This works for **IWA/SAML/PKI** portals too - the web app already performed the interactive sign-in, and arcq only reuses the resulting refresh token. arcq never performs sign-in itself.
+
+After connecting:
+
+```bash
+arcq token refresh   # mint a fresh access token on demand
+```
+
+and `arcq query`/`list`/`fields` automatically refresh once and retry if they hit an expired token, so day-to-day use is interaction-free.
+
+**Recommended: a credential helper (secret stays in your secret manager).** Instead of storing the refresh token in an arcq file, point arcq at a command that prints it. arcq stays secret-manager-agnostic - the same pattern as git credential helpers:
+
+```bash
+arcq token connect --command 'op read op://Vault/arcgis/refresh-token'   # 1Password
+arcq token connect --command 'pass show arcgis/refresh-token'            # pass
+arcq token connect --command 'security find-generic-password -s arcgis -w'  # macOS Keychain
+```
+
+With a command configured, the only secret arcq writes to disk is the short-lived access token in `~/.arcq-token`.
+
+### 3. Username/password portals (browser-console alternative)
+
+If your portal uses **built-in accounts** (not IWA/SAML/PKI), you can mint a token straight from the browser console against `<portal>/sharing/rest/generateToken` with an `expiration` up to the portal's `maxTokenExpirationMinutes`, then `arcq token set` it. (This does **not** work on web-tier portals, which reject `generateToken` for anything but built-in accounts - use `token connect` there.)
+
+### Security note
+
+A refresh token stored directly in `~/.arcq-oauth.json` is a **live credential**; arcq keeps it `600` (owner-only), but treat the machine account as the security boundary. Prefer the `--command` credential-helper form so the secret lives in your secret manager instead. To disconnect, delete `~/.arcq-oauth.json`. The refresh token is never printed by any command.
 
 ## Commands
 
@@ -338,7 +389,7 @@ Print the arcq version (also `--version` / `-V`).
 | ---- | ---------------------------------------------------------------------------------- |
 | 0    | success - an empty `[]` result is a real answer, not an error                      |
 | 1    | error: bad where clause, unknown layer, no active layer, server or request failure |
-| 2    | token invalid or expired - run `arcq token set`                                    |
+| 2    | token invalid or expired - run `arcq token refresh` (or `arcq token set`)          |
 
 Errors print `error: <message>` to stderr. ArcGIS reports failures inside HTTP-200 response bodies; arcq surfaces those as errors instead of printing `[]`.
 
