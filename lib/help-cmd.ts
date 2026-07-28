@@ -18,7 +18,10 @@ Usage:
   arcq layers                        List named layers in the config (--names for keys only)
   arcq services add <name> <url>     Add a named service to the config
   arcq token set <token>             Save an auth token
-  arcq token show                    Print the stored token
+  arcq token show                    Print the stored token, its expiry, and refresh status
+  arcq token connect                 Set up OAuth refresh from an esriJSAPIOAuth blob or refresh token
+  arcq token connect --command <cmd> Set up OAuth refresh via a credential-helper command
+  arcq token refresh                 Mint a fresh access token from stored OAuth credentials
   arcq version, --version, -V        Print the arcq version
   arcq --help, -h                    Show this help
 
@@ -42,7 +45,7 @@ Where clauses:
 Exit codes:
   0  success - an empty [] result is a real answer, not an error
   1  error (bad where clause, unknown layer, no active layer, server error)
-  2  token invalid or expired - run: arcq token set
+  2  token invalid or expired - run: arcq token set or arcq token refresh
 
 Examples:
   arcq refresh && arcq sync

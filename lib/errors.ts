@@ -11,5 +11,8 @@ export class ArcqError extends Error {
 }
 
 export function tokenError(): ArcqError {
-  return new ArcqError('token invalid or expired - run: arcq token set', 2);
+  return new ArcqError(
+    'token invalid or expired - run: arcq token set or arcq token refresh',
+    2
+  );
 }
