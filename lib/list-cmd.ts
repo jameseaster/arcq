@@ -1,5 +1,5 @@
 import { loadConfig } from './config-core.js';
-import { getToken } from './token-core.js';
+import { withTokenRetry } from './oauth-core.js';
 import { fetchServiceCatalog } from './arcgis-core.js';
 
 export default async function listCmd(args: string[]): Promise<void> {
@@ -15,8 +15,9 @@ export default async function listCmd(args: string[]): Promise<void> {
     return;
   }
 
-  const token = getToken();
-  const layers = await fetchServiceCatalog(serviceUrl, token);
+  const layers = await withTokenRetry((token) =>
+    fetchServiceCatalog(serviceUrl, token)
+  );
 
   layers.forEach((l) => {
     console.log(`${l.id} → ${l.name}`);

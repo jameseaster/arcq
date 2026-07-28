@@ -1,6 +1,6 @@
 import { loadContext } from './context-core.js';
 import { loadConfig } from './config-core.js';
-import { getToken } from './token-core.js';
+import { withTokenRetry } from './oauth-core.js';
 import { queryLayer } from './arcgis-core.js';
 import { ArcqError } from './errors.js';
 import { resolveLayerArg } from './layer-resolve.js';
@@ -96,8 +96,6 @@ export default async function queryCmd(args: string[]): Promise<void> {
     where = positionals[1] ?? '1=1';
   }
 
-  const token = getToken();
-
   if (!flags.quiet) {
     const rule = '─'.repeat(60);
     console.error('');
@@ -109,53 +107,57 @@ export default async function queryCmd(args: string[]): Promise<void> {
     console.error('');
   }
 
-  if (flags.count) {
-    // Single count request — --out-fields and --limit are ignored here
-    // (documented in help), --order-by passes through harmlessly.
-    const data = await queryLayer(layerUrl, {
-      where,
-      f: 'json',
-      token,
-      returnCountOnly: true,
-      ...(flags.orderBy !== undefined && { orderByFields: flags.orderBy }),
-    });
-    console.log(JSON.stringify({ count: data.count ?? 0 }));
-    return;
-  }
+  // withTokenRetry runs the request(s) with the stored token and, on an
+  // expired/invalid-token failure with OAuth configured, refreshes once and
+  // retries the whole operation a single time.
+  const output = await withTokenRetry(async (token) => {
+    if (flags.count) {
+      // Single count request - --out-fields and --limit are ignored here
+      // (documented in help), --order-by passes through harmlessly.
+      const data = await queryLayer(layerUrl, {
+        where,
+        f: 'json',
+        token,
+        returnCountOnly: true,
+        ...(flags.orderBy !== undefined && { orderByFields: flags.orderBy }),
+      });
+      return JSON.stringify({ count: data.count ?? 0 });
+    }
 
-  const all: Feature[] = [];
-  let offset = 0;
+    const all: Feature[] = [];
+    let offset = 0;
 
-  while (true) {
-    const pageSize =
-      flags.limit != null ? Math.min(1000, flags.limit - all.length) : 1000;
+    while (true) {
+      const pageSize =
+        flags.limit != null ? Math.min(1000, flags.limit - all.length) : 1000;
 
-    const data = await queryLayer(layerUrl, {
-      where,
-      outFields: flags.outFields ?? '*',
-      f: 'json',
-      token,
-      resultOffset: offset,
-      resultRecordCount: pageSize,
-      ...(flags.orderBy !== undefined && { orderByFields: flags.orderBy }),
-    });
+      const data = await queryLayer(layerUrl, {
+        where,
+        outFields: flags.outFields ?? '*',
+        f: 'json',
+        token,
+        resultOffset: offset,
+        resultRecordCount: pageSize,
+        ...(flags.orderBy !== undefined && { orderByFields: flags.orderBy }),
+      });
 
-    const features = data.features || [];
-    all.push(...features);
+      const features = data.features || [];
+      all.push(...features);
 
-    if (!data.exceededTransferLimit || features.length === 0) break;
-    if (flags.limit != null && all.length >= flags.limit) break;
-    offset += features.length;
-  }
+      if (!data.exceededTransferLimit || features.length === 0) break;
+      if (flags.limit != null && all.length >= flags.limit) break;
+      offset += features.length;
+    }
 
-  // Defends against a server returning more rows than asked.
-  if (flags.limit != null) all.length = Math.min(all.length, flags.limit);
+    // Defends against a server returning more rows than asked.
+    if (flags.limit != null) all.length = Math.min(all.length, flags.limit);
 
-  console.log(
-    JSON.stringify(
+    return JSON.stringify(
       all.map((f) => f.attributes),
       null,
       2
-    )
-  );
+    );
+  });
+
+  console.log(output);
 }

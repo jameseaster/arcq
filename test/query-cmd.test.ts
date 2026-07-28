@@ -3,7 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import http from 'http';
-import { tokenPath } from '../lib/token-core.js';
+import { tokenPath, getToken } from '../lib/token-core.js';
+import { oauthPath, tokenMetaPath, saveOAuth } from '../lib/oauth-core.js';
 import queryCmd from '../lib/query-cmd.js';
 import { ArcqError } from '../lib/errors.js';
 import type { Context } from '../lib/types.js';
@@ -21,6 +22,8 @@ describe('query-cmd', () => {
   let originalEnv: string | undefined;
   let contextBackup: string | null;
   let tokenBackup: string | null;
+  let oauthBackup: string | null;
+  let metaBackup: string | null;
   let logs: string[];
   let originalLog: typeof console.log;
   let errs: string[];
@@ -89,9 +92,17 @@ describe('query-cmd', () => {
     tokenBackup = fs.existsSync(tokenPath)
       ? fs.readFileSync(tokenPath, 'utf-8')
       : null;
+    oauthBackup = fs.existsSync(oauthPath)
+      ? fs.readFileSync(oauthPath, 'utf-8')
+      : null;
+    metaBackup = fs.existsSync(tokenMetaPath)
+      ? fs.readFileSync(tokenMetaPath, 'utf-8')
+      : null;
 
     if (fs.existsSync(CONTEXT_PATH)) fs.unlinkSync(CONTEXT_PATH);
     if (fs.existsSync(tokenPath)) fs.unlinkSync(tokenPath);
+    if (fs.existsSync(oauthPath)) fs.unlinkSync(oauthPath);
+    if (fs.existsSync(tokenMetaPath)) fs.unlinkSync(tokenMetaPath);
 
     logs = [];
     originalLog = console.log;
@@ -124,6 +135,18 @@ describe('query-cmd', () => {
       fs.writeFileSync(tokenPath, tokenBackup);
     } else if (fs.existsSync(tokenPath)) {
       fs.unlinkSync(tokenPath);
+    }
+
+    if (oauthBackup !== null) {
+      fs.writeFileSync(oauthPath, oauthBackup);
+    } else if (fs.existsSync(oauthPath)) {
+      fs.unlinkSync(oauthPath);
+    }
+
+    if (metaBackup !== null) {
+      fs.writeFileSync(tokenMetaPath, metaBackup);
+    } else if (fs.existsSync(tokenMetaPath)) {
+      fs.unlinkSync(tokenMetaPath);
     }
   });
 
@@ -549,6 +572,90 @@ describe('query-cmd', () => {
         )
       ).to.have.length(1);
       expect(JSON.parse(logs[0]!)).to.deep.equal([{ ID: 1 }]);
+    });
+  });
+
+  describe('auto-refresh on expiry', () => {
+    // Serves the OAuth token endpoint plus a /query that fails with a token
+    // error for its first `queryFailures` calls, then succeeds.
+    function autoRefreshHandler(
+      queryFailures: number,
+      freshFeatures: unknown[]
+    ) {
+      let queryCalls = 0;
+      handler = (req: http.IncomingMessage, res: http.ServerResponse) => {
+        requests.push(req);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        if (req.url!.startsWith('/sharing/rest/oauth2/token')) {
+          res.end(
+            JSON.stringify({ access_token: 'fresh-token', expires_in: 1800 })
+          );
+          return;
+        }
+        queryCalls++;
+        if (queryCalls <= queryFailures) {
+          res.end(
+            JSON.stringify({ error: { code: 499, message: 'Token Required' } })
+          );
+        } else {
+          res.end(JSON.stringify({ features: freshFeatures }));
+        }
+      };
+    }
+
+    function tokenRequests() {
+      return requests.filter((r) =>
+        r.url!.startsWith('/sharing/rest/oauth2/token')
+      );
+    }
+
+    function queryRequests() {
+      return requests.filter((r) => r.url!.startsWith('/query'));
+    }
+
+    it('refreshes once and retries the query when OAuth is configured', async () => {
+      autoRefreshHandler(1, [{ attributes: { ID: 7 } }]);
+      setContext({ url: baseUrl });
+      saveOAuth({ portalUrl: baseUrl, appId: 'app', refreshToken: 'rt' });
+
+      await queryCmd(['-q', '1=1']);
+
+      expect(tokenRequests()).to.have.length(1);
+      expect(queryRequests()).to.have.length(2);
+      expect(getToken()).to.equal('fresh-token');
+      expect(JSON.parse(logs[0]!)).to.deep.equal([{ ID: 7 }]);
+    });
+
+    it('does not refresh when OAuth is not configured', async () => {
+      autoRefreshHandler(1, [{ attributes: { ID: 7 } }]);
+      setContext({ url: baseUrl });
+
+      let thrown;
+      try {
+        await queryCmd(['-q', '1=1']);
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).to.be.instanceOf(ArcqError);
+      expect((thrown as ArcqError).exitCode).to.equal(2);
+      expect(tokenRequests()).to.have.length(0);
+      expect(queryRequests()).to.have.length(1);
+    });
+
+    it('retries at most once and then exits 2 (no loop)', async () => {
+      autoRefreshHandler(99, []);
+      setContext({ url: baseUrl });
+      saveOAuth({ portalUrl: baseUrl, appId: 'app', refreshToken: 'rt' });
+
+      let thrown;
+      try {
+        await queryCmd(['-q', '1=1']);
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).to.be.instanceOf(ArcqError);
+      expect((thrown as ArcqError).exitCode).to.equal(2);
+      expect(queryRequests()).to.have.length(2);
     });
   });
 });
