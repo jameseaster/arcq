@@ -13,6 +13,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TSX = path.join(ROOT, 'node_modules', '.bin', 'tsx');
 const BIN = path.join(ROOT, 'bin', 'arcq.ts');
 const TEMP_CONFIG = path.join(os.tmpdir(), 'arcq-test-bin-config.json');
+const TEMP_HOME = path.join(os.tmpdir(), 'arcq-test-bin-home');
 
 interface BinResult {
   status: number | null;
@@ -41,8 +42,16 @@ describe('bin/arcq', function () {
 
   function runBin(args: string[]): Promise<BinResult> {
     return new Promise((resolve, reject) => {
+      // The child gets an empty temp HOME so the developer's real token and
+      // OAuth files can't leak in (a real OAuth setup would turn the token-
+      // error test into a live credential-command run and portal request).
       const child = spawn(TSX, [BIN, ...args], {
-        env: { ...process.env, ARCQ_CONFIG: TEMP_CONFIG },
+        env: {
+          ...process.env,
+          ARCQ_CONFIG: TEMP_CONFIG,
+          HOME: TEMP_HOME,
+          USERPROFILE: TEMP_HOME,
+        },
       });
       let stdout = '';
       let stderr = '';
@@ -55,6 +64,7 @@ describe('bin/arcq', function () {
 
   before(async () => {
     fs.writeFileSync(TEMP_CONFIG, '{}');
+    fs.mkdirSync(TEMP_HOME, { recursive: true });
     server = http.createServer((req, res) => handler(req, res));
     await new Promise<void>((resolve) => {
       server.listen(0, '127.0.0.1', () => {
@@ -66,6 +76,7 @@ describe('bin/arcq', function () {
 
   after(async () => {
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
+    fs.rmSync(TEMP_HOME, { recursive: true, force: true });
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 
