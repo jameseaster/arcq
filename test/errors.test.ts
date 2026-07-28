@@ -30,9 +30,9 @@ describe('errors', () => {
       expect(tokenError().exitCode).to.equal(2);
     });
 
-    it('points at arcq token set', () => {
+    it('points at arcq token set and arcq token refresh', () => {
       expect(tokenError().message).to.equal(
-        'token invalid or expired - run: arcq token set'
+        'token invalid or expired - run: arcq token set or arcq token refresh'
       );
     });
   });
