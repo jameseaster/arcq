@@ -71,6 +71,23 @@ export interface QueryResponse {
   error?: ArcGisError;
 }
 
+// The ArcGIS OAuth2 token endpoint reports failures in a `error` object; its
+// shape varies (portal-style `code`/`message`, OAuth-style `error`/
+// `error_description`), so every field is optional.
+export interface OAuthTokenError {
+  code?: number;
+  error?: string;
+  error_description?: string;
+  message?: string;
+}
+
+export interface OAuthTokenResponse {
+  access_token?: string;
+  expires_in?: number;
+  refresh_token?: string;
+  error?: OAuthTokenError;
+}
+
 export interface QueryParams {
   where?: string;
   outFields?: string;
