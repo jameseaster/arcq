@@ -1,8 +1,8 @@
 import fs from 'fs';
-import readline from 'readline';
 import { fetchOwningSystemUrl } from './arcgis-core.js';
 import { loadContext } from './context-core.js';
 import { ArcqError } from './errors.js';
+import { makePrompter } from './prompt-core.js';
 import {
   oauthPath,
   parseEsriOAuthBlob,
@@ -18,20 +18,6 @@ export interface ConnectDeps {
   prompt?: (question: string) => Promise<string>;
   // Validates the stored credentials by minting a token. Injected in tests.
   refresh?: () => Promise<RefreshResult>;
-}
-
-// Prompts go to stderr so an interactive connect never contaminates stdout.
-function defaultPrompt(question: string): Promise<string> {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stderr,
-  });
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer);
-    });
-  });
 }
 
 function printConnectGuidance(): void {
@@ -83,9 +69,21 @@ export default async function tokenConnectCmd(
   args: string[],
   deps: ConnectDeps = {}
 ): Promise<void> {
-  const prompt = deps.prompt ?? defaultPrompt;
+  const prompter = deps.prompt ? null : makePrompter();
+  const prompt = deps.prompt ?? prompter!.prompt;
   const refresh = deps.refresh ?? performRefresh;
+  try {
+    await runConnect(args, prompt, refresh);
+  } finally {
+    prompter?.close();
+  }
+}
 
+async function runConnect(
+  args: string[],
+  prompt: (question: string) => Promise<string>,
+  refresh: () => Promise<RefreshResult>
+): Promise<void> {
   let command: string | undefined;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--command') {
