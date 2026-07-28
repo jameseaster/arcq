@@ -14,7 +14,9 @@ const { expect } = chai;
 describe('token-cmd', () => {
   let backups: Record<string, string | null>;
   let logs: string[];
+  let errs: string[];
   let originalLog: typeof console.log;
+  let originalError: typeof console.error;
 
   const paths = [tokenPath, oauthPath, tokenMetaPath];
 
@@ -26,12 +28,16 @@ describe('token-cmd', () => {
     }
 
     logs = [];
+    errs = [];
     originalLog = console.log;
+    originalError = console.error;
     console.log = (...args) => logs.push(args.join(' '));
+    console.error = (...args) => errs.push(args.join(' '));
   });
 
   afterEach(() => {
     console.log = originalLog;
+    console.error = originalError;
 
     for (const p of paths) {
       const backup = backups[p];
@@ -52,16 +58,16 @@ describe('token-cmd', () => {
       expect(logs.join(' ')).to.include('No token set.');
     });
 
-    it('reports "refresh: not configured" when no oauth is set up', async () => {
+    it('reports "refresh: not configured" on stderr when no oauth is set up', async () => {
       await tokenCmd(['show']);
-      expect(logs.join(' ')).to.include('refresh: not configured');
+      expect(errs.join(' ')).to.include('refresh: not configured');
     });
 
-    it('prints the token expiry line when meta exists', async () => {
+    it('prints the token expiry line on stderr when meta exists', async () => {
       setTokenValue('tok');
       saveTokenMeta({ expires: Date.now() + 30 * 60000 });
       await tokenCmd(['show']);
-      expect(logs.join(' ')).to.match(/expires:.*min left/);
+      expect(errs.join(' ')).to.match(/expires:.*min left/);
     });
 
     it('reports the configured portal origin without the refresh token', async () => {
@@ -72,30 +78,58 @@ describe('token-cmd', () => {
         refreshToken: 'super-secret-rt',
       });
       await tokenCmd(['show']);
-      const out = logs.join(' ');
+      const out = errs.join(' ');
       expect(out).to.include(
         'refresh: configured (portal https://portal.example.com)'
       );
       expect(out).to.not.include('super-secret-rt');
+      expect(logs.join(' ')).to.not.include('super-secret-rt');
+    });
+
+    it('keeps stdout to the bare token so $(arcq token show) stays scriptable', async () => {
+      setTokenValue('tok');
+      saveTokenMeta({ expires: Date.now() + 30 * 60000 });
+      saveOAuth({
+        portalUrl: 'https://portal.example.com/arcgis',
+        appId: 'app-1',
+        refreshToken: 'super-secret-rt',
+      });
+      await tokenCmd(['show']);
+      expect(logs).to.deep.equal(['tok']);
     });
   });
 
   describe('set', () => {
     it('saves the token', async () => {
-      tokenCmd(['set', 'my-new-token']);
+      await tokenCmd(['set', 'my-new-token']);
       expect(fs.readFileSync(tokenPath, 'utf-8').trim()).to.equal(
         'my-new-token'
       );
     });
 
     it('logs confirmation', async () => {
-      tokenCmd(['set', 'my-new-token']);
+      await tokenCmd(['set', 'my-new-token']);
       expect(logs.join(' ')).to.include('Token saved');
     });
 
-    it('prints usage when token argument is missing', async () => {
-      tokenCmd(['set']);
-      expect(logs.join(' ')).to.include('Usage');
+    it('prompts for the token when the argument is omitted', async () => {
+      await tokenCmd(['set'], {
+        prompt: async () => '  prompted-token  ',
+      });
+      expect(fs.readFileSync(tokenPath, 'utf-8').trim()).to.equal(
+        'prompted-token'
+      );
+    });
+
+    it('rejects an empty prompted token without writing anything', async () => {
+      let error: unknown;
+      try {
+        await tokenCmd(['set'], { prompt: async () => '   ' });
+      } catch (err) {
+        error = err;
+      }
+      expect(String(error)).to.include('no token provided');
+      expect(fs.existsSync(tokenPath)).to.equal(false);
     });
   });
 
