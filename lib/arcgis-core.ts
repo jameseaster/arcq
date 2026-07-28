@@ -6,6 +6,7 @@ import type {
   CatalogLayer,
   LayerField,
   LayerMetadataResponse,
+  OAuthTokenResponse,
   QueryParams,
   QueryResponse,
   ServiceCatalogResponse,
@@ -123,4 +124,35 @@ export async function queryLayer(
   }
 
   return data;
+}
+
+// POST the OAuth2 token endpoint under a portal. The raw response is returned
+// unmodified (including any `error`) so the caller can distinguish an expired
+// refresh token from other failures.
+export async function requestOAuthToken(
+  portalUrl: string,
+  params: Record<string, unknown>
+): Promise<OAuthTokenResponse> {
+  const base = portalUrl.replace(/\/+$/, '');
+  return postForm<OAuthTokenResponse>(
+    `${base}/sharing/rest/oauth2/token`,
+    params
+  );
+}
+
+// Best-effort lookup of the portal (owning system) that fronts a layer's
+// hosting server, read from the ArcGIS `rest/info` document. Returns undefined
+// when the URL has no `/rest/` segment or the server does not report one.
+export async function fetchOwningSystemUrl(
+  layerUrl: string,
+  token: string | null
+): Promise<string | undefined> {
+  const idx = layerUrl.indexOf('/rest/');
+  if (idx === -1) return undefined;
+  const infoUrl = `${layerUrl.slice(0, idx)}/rest/info`;
+  const data = await postForm<{ owningSystemUrl?: string }>(infoUrl, {
+    f: 'json',
+    token,
+  });
+  return data.owningSystemUrl;
 }
