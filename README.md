@@ -153,7 +153,8 @@ If a token is stored it is sent with every request. Unauthenticated services wor
 ### 1. Paste a token (baseline)
 
 ```bash
-arcq token set <token>  # save a token to ~/.arcq-token (mode 600)
+arcq token set          # save a token to ~/.arcq-token (mode 600); prompts for it
+arcq token set <token>  # same, taking the token as an argument (lands in shell history)
 arcq token show         # print the stored token, its expiry, and refresh status
 ```
 
