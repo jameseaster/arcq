@@ -4,6 +4,7 @@ import path from 'path';
 import os from 'os';
 import http from 'http';
 import { tokenPath } from '../lib/token-core.js';
+import { oauthPath, tokenMetaPath } from '../lib/oauth-core.js';
 import listCmd from '../lib/list-cmd.js';
 
 const { expect } = chai;
@@ -24,6 +25,8 @@ describe('list-cmd', () => {
   let requests: http.IncomingMessage[];
   let originalEnv: string | undefined;
   let tokenBackup: string | null;
+  let oauthBackup: string | null;
+  let tokenMetaBackup: string | null;
   let logs: string[];
   let originalLog: typeof console.log;
 
@@ -67,6 +70,17 @@ describe('list-cmd', () => {
       : null;
     if (fs.existsSync(tokenPath)) fs.unlinkSync(tokenPath);
 
+    // Isolate the developer's real OAuth setup: with it present, the exit-2
+    // path would trigger a real credential-command run and portal request.
+    oauthBackup = fs.existsSync(oauthPath)
+      ? fs.readFileSync(oauthPath, 'utf-8')
+      : null;
+    tokenMetaBackup = fs.existsSync(tokenMetaPath)
+      ? fs.readFileSync(tokenMetaPath, 'utf-8')
+      : null;
+    if (fs.existsSync(oauthPath)) fs.unlinkSync(oauthPath);
+    if (fs.existsSync(tokenMetaPath)) fs.unlinkSync(tokenMetaPath);
+
     logs = [];
     originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
@@ -86,6 +100,18 @@ describe('list-cmd', () => {
       fs.writeFileSync(tokenPath, tokenBackup);
     } else if (fs.existsSync(tokenPath)) {
       fs.unlinkSync(tokenPath);
+    }
+
+    if (oauthBackup !== null) {
+      fs.writeFileSync(oauthPath, oauthBackup);
+    } else if (fs.existsSync(oauthPath)) {
+      fs.unlinkSync(oauthPath);
+    }
+
+    if (tokenMetaBackup !== null) {
+      fs.writeFileSync(tokenMetaPath, tokenMetaBackup);
+    } else if (fs.existsSync(tokenMetaPath)) {
+      fs.unlinkSync(tokenMetaPath);
     }
   });
 
