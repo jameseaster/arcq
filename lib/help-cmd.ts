@@ -17,7 +17,7 @@ Usage:
   arcq list <service>                List layers/tables in a service or URL
   arcq layers                        List named layers in the config (--names for keys only)
   arcq services add <name> <url>     Add a named service to the config
-  arcq token set <token>             Save an auth token
+  arcq token set [<token>]          Save an auth token (prompts when omitted)
   arcq token show                    Print the stored token, its expiry, and refresh status
   arcq token connect                 Set up OAuth refresh from an esriJSAPIOAuth blob or refresh token
   arcq token connect --command <cmd> Set up OAuth refresh via a credential-helper command
