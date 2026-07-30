@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.1.0] - 2026-07-30
+
+### Added
+
+- OAuth refresh-token support, so secured-portal users stop re-pasting short-lived tokens. `arcq token connect` stores a refresh credential once - from a pasted `esriJSAPIOAuth` blob, a bare refresh token, or a `--command` credential helper (1Password, `pass`, Keychain) that keeps the secret in your secret manager. Works with IWA/SAML/PKI portals, since the web app already performed the sign-in.
+- `arcq token refresh` - mint a fresh access token on demand from the stored credential.
+- Automatic refresh: `arcq query`, `arcq list`, and `arcq fields` transparently refresh once and retry when they hit an expired token (exit code `2`) and OAuth is configured.
+- New state files `~/.arcq-oauth.json` (refresh credential) and `~/.arcq-token-meta.json` (access-token expiry), both written mode `600`. The refresh token is never printed by any command.
+
+### Changed
+
+- `arcq token set` now prompts for the token when it is omitted, so the secret no longer has to land in shell history; passing it as an argument still works.
+- `arcq token show` now reports the access-token expiry and whether refresh is configured (portal origin only, never the token), on stderr so `$(arcq token show)` stays scriptable.
+- The exit-code `2` guidance and error message now point at `arcq token refresh` as well as `arcq token set`.
+
 ## [1.0.1] - 2026-07-21
 
 ### Changed
