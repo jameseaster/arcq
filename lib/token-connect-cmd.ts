@@ -26,9 +26,16 @@ function printConnectGuidance(): void {
   );
   console.log('page of your ArcGIS web app and run:');
   console.log('');
-  console.log("  copy(localStorage.getItem('esriJSAPIOAuth'))");
+  console.log(
+    "  copy(sessionStorage.getItem('esriJSAPIOAuth') ?? localStorage.getItem('esriJSAPIOAuth'))"
+  );
   console.log('');
-  console.log('then paste the clipboard contents below.');
+  console.log(
+    'The web app stores it in session or local storage depending on how it'
+  );
+  console.log(
+    'signed in, so the line checks both. Paste the clipboard contents below.'
+  );
   console.log('');
 }
 
