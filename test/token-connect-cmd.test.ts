@@ -95,6 +95,19 @@ describe('token-connect-cmd', () => {
     expect(loadOAuth()!.portalUrl).to.equal('https://first.example.com');
   });
 
+  it('tells the user to check session and local storage', async () => {
+    const raw = blob({
+      'https://portal.example.com': { appId: 'a', refreshToken: 'r' },
+    });
+    await tokenConnectCmd([], {
+      prompt: promptQueue([raw]),
+      refresh: okRefresh,
+    });
+    const output = logs.join(' ');
+    expect(output).to.include("sessionStorage.getItem('esriJSAPIOAuth')");
+    expect(output).to.include("localStorage.getItem('esriJSAPIOAuth')");
+  });
+
   it('prints a Connected confirmation on success', async () => {
     const raw = blob({
       'https://portal.example.com': { appId: 'a', refreshToken: 'r' },

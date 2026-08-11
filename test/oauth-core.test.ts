@@ -20,7 +20,7 @@ import type { OAuthTokenResponse } from '../lib/types.js';
 
 const { expect } = chai;
 
-// A minimal esriJSAPIOAuth localStorage blob for parse tests.
+// A minimal esriJSAPIOAuth browser-storage blob for parse tests.
 function blob(entries: Record<string, unknown>): string {
   return JSON.stringify({ '/': entries });
 }

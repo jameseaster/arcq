@@ -83,7 +83,7 @@ export interface ParsedBlob {
   refreshTokenExpires?: number;
 }
 
-// Extract the first portal entry from an `esriJSAPIOAuth` localStorage blob,
+// Extract the first portal entry from an `esriJSAPIOAuth` browser-storage blob,
 // shaped `{"/": {"<portalUrl>": {appId, refreshToken, expires, ...}}}`. Throws
 // a clear ArcqError when the structure or required fields are missing.
 export function parseEsriOAuthBlob(raw: string): ParsedBlob {
