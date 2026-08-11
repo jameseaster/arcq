@@ -141,7 +141,12 @@ describe('interactive-cmd', () => {
   it('overwrites an existing context', async () => {
     fs.writeFileSync(
       CONTEXT_PATH,
-      JSON.stringify({ service: 'old', layerId: 99, name: 'Old', url: 'https://old' })
+      JSON.stringify({
+        service: 'old',
+        layerId: 99,
+        name: 'Old',
+        url: 'https://old',
+      })
     );
     saveCache(FAKE_CACHE);
     process.env.ARCQ_TEST_SELECT = 'service-b:0';
@@ -257,7 +262,9 @@ describe('interactive-cmd', () => {
         thrown = e;
       }
       expect(thrown).to.be.instanceOf(ArcqError);
-      expect((thrown as ArcqError).message).to.include("unknown layer 'Parcel'");
+      expect((thrown as ArcqError).message).to.include(
+        "unknown layer 'Parcel'"
+      );
       expect((thrown as ArcqError).message).to.include('Parcels');
       expect(loadContext()).to.equal(null);
     });

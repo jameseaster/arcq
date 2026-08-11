@@ -24,9 +24,7 @@ function resolveNamed(name: string, allLayers: LayerWithService[]): Context {
     const idStr = name.slice(sep + 1);
     if (/^\d+$/.test(idStr)) {
       const id = parseInt(idStr, 10);
-      const match = allLayers.find(
-        (l) => l.service === service && l.id === id
-      );
+      const match = allLayers.find((l) => l.service === service && l.id === id);
       if (match) {
         return {
           service: match.service,
