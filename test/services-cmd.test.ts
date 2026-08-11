@@ -57,7 +57,9 @@ describe('services-cmd', () => {
     it('writes the service to the config', () => {
       writeConfig({});
       servicesCmd(['add', 'my-service', 'https://example.com/FeatureServer']);
-      const config = JSON.parse(fs.readFileSync(TEMP_CONFIG, 'utf-8')) as Config;
+      const config = JSON.parse(
+        fs.readFileSync(TEMP_CONFIG, 'utf-8')
+      ) as Config;
       expect(config.services!['my-service']).to.equal(
         'https://example.com/FeatureServer'
       );
@@ -65,7 +67,9 @@ describe('services-cmd', () => {
 
     it('creates the config file when it does not exist', () => {
       servicesCmd(['add', 'my-service', 'https://example.com/FeatureServer']);
-      const config = JSON.parse(fs.readFileSync(TEMP_CONFIG, 'utf-8')) as Config;
+      const config = JSON.parse(
+        fs.readFileSync(TEMP_CONFIG, 'utf-8')
+      ) as Config;
       expect(config.services!['my-service']).to.equal(
         'https://example.com/FeatureServer'
       );
@@ -76,14 +80,18 @@ describe('services-cmd', () => {
         services: { existing: 'https://example.com/Other' },
       });
       servicesCmd(['add', 'new-service', 'https://example.com/FeatureServer']);
-      const config = JSON.parse(fs.readFileSync(TEMP_CONFIG, 'utf-8')) as Config;
+      const config = JSON.parse(
+        fs.readFileSync(TEMP_CONFIG, 'utf-8')
+      ) as Config;
       expect(config.services).to.have.keys('existing', 'new-service');
     });
 
     it('preserves other config keys', () => {
       writeConfig({ layers: { 'existing-layer': 'https://example.com/0' } });
       servicesCmd(['add', 'my-service', 'https://example.com/FeatureServer']);
-      const config = JSON.parse(fs.readFileSync(TEMP_CONFIG, 'utf-8')) as Config;
+      const config = JSON.parse(
+        fs.readFileSync(TEMP_CONFIG, 'utf-8')
+      ) as Config;
       expect(config.layers).to.deep.equal({
         'existing-layer': 'https://example.com/0',
       });
@@ -94,7 +102,9 @@ describe('services-cmd', () => {
         services: { 'my-service': 'https://example.com/Old' },
       });
       servicesCmd(['add', 'my-service', 'https://example.com/New']);
-      const config = JSON.parse(fs.readFileSync(TEMP_CONFIG, 'utf-8')) as Config;
+      const config = JSON.parse(
+        fs.readFileSync(TEMP_CONFIG, 'utf-8')
+      ) as Config;
       expect(config.services!['my-service']).to.equal(
         'https://example.com/New'
       );

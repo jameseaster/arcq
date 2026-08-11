@@ -39,14 +39,18 @@ describe('cache-core', () => {
     it('writes the cache as JSON to CACHE_PATH', () => {
       const data = { 'my-service': [{ id: 0, name: 'Parcels' }] };
       saveCache(data as unknown as Cache);
-      expect(JSON.parse(fs.readFileSync(CACHE_PATH, 'utf-8'))).to.deep.equal(data);
+      expect(JSON.parse(fs.readFileSync(CACHE_PATH, 'utf-8'))).to.deep.equal(
+        data
+      );
     });
 
     it('overwrites an existing cache file', () => {
       fs.writeFileSync(CACHE_PATH, JSON.stringify({ old: [] }));
       const data = { new: [{ id: 1, name: 'Roads' }] };
       saveCache(data as unknown as Cache);
-      expect(JSON.parse(fs.readFileSync(CACHE_PATH, 'utf-8'))).to.deep.equal(data);
+      expect(JSON.parse(fs.readFileSync(CACHE_PATH, 'utf-8'))).to.deep.equal(
+        data
+      );
     });
   });
 
