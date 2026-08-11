@@ -66,8 +66,18 @@ arcq token connect    # paste the esriJSAPIOAuth blob from an ArcGIS web app
 ```
 
 The blob comes from the browser DevTools console on any ArcGIS web app the user
-is signed into: `copy(localStorage.getItem('esriJSAPIOAuth'))`. This works for
-IWA/SAML/PKI portals too, because the web app already performed the sign-in.
+is signed into. The app stores it in session or local storage depending on how
+it signed in, so the line checks both:
+
+```js
+copy(
+  sessionStorage.getItem('esriJSAPIOAuth') ??
+    localStorage.getItem('esriJSAPIOAuth')
+);
+```
+
+This works for IWA/SAML/PKI portals too, because the web app already performed
+the sign-in.
 
 For a setup where the secret never touches arcq's files, point it at a
 credential-helper command that prints the refresh token:

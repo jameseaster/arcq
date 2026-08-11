@@ -164,10 +164,13 @@ This is the simplest path and always works. The catch on secured portals is that
 
 `arcq token connect` stores an OAuth refresh credential so arcq can mint fresh access tokens on its own - no re-pasting until the refresh token itself expires (portal-configured, ~2 weeks by default).
 
-Every ArcGIS JS API web app persists its OAuth credential in the browser. On a page of any ArcGIS web app you're signed into, open the DevTools console and copy it:
+Every ArcGIS JS API web app stores its OAuth credential in the browser - in session storage or local storage depending on how the app signed in, so copy whichever is there. On a page of any ArcGIS web app you're signed into, open the DevTools console and run:
 
 ```js
-copy(localStorage.getItem('esriJSAPIOAuth'));
+copy(
+  sessionStorage.getItem('esriJSAPIOAuth') ??
+    localStorage.getItem('esriJSAPIOAuth')
+);
 ```
 
 Then paste it into arcq:
