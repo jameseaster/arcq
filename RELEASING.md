@@ -62,7 +62,8 @@ npm publish
 ```
 
 The `prepare` script compiles `dist/` automatically before packing, and the
-tarball ships only `dist/`, `README.md`, `LICENSE`, and `package.json`.
+tarball ships only `dist/`, `skills/`, `README.md`, `LICENSE`, and
+`package.json`.
 Verify the result:
 
 ```bash
