@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.1.1] - 2026-08-13
+
+### Fixed
+
+- `arcq token connect` and the docs now read the `esriJSAPIOAuth` blob from
+  session storage or local storage. ArcGIS JS API apps store the credential in
+  whichever one matches how they signed in, so the old localStorage-only
+  snippet returned `null` for a whole class of portals.
+- Aligned the `token set` row in `arcq --help` with the rest of the table.
+
 ## [1.1.0] - 2026-07-30
 
 ### Added
