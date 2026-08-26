@@ -19,20 +19,24 @@ function captureHelp(): string {
 
 describe('help-cmd', () => {
   let output: string;
-  let originalEnv: string | undefined;
+  let originalConfig: string | undefined;
+  let originalHome: string | undefined;
 
+  // Both overrides are cleared so the default-path assertions below describe
+  // what a user with no arcq environment set would actually see.
   beforeEach(() => {
-    originalEnv = process.env.ARCQ_CONFIG;
+    originalConfig = process.env.ARCQ_CONFIG;
+    originalHome = process.env.ARCQ_HOME;
     delete process.env.ARCQ_CONFIG;
+    delete process.env.ARCQ_HOME;
     output = captureHelp();
   });
 
   afterEach(() => {
-    if (originalEnv === undefined) {
-      delete process.env.ARCQ_CONFIG;
-    } else {
-      process.env.ARCQ_CONFIG = originalEnv;
-    }
+    if (originalConfig === undefined) delete process.env.ARCQ_CONFIG;
+    else process.env.ARCQ_CONFIG = originalConfig;
+    if (originalHome === undefined) delete process.env.ARCQ_HOME;
+    else process.env.ARCQ_HOME = originalHome;
   });
 
   it('prints output', () => {
@@ -76,6 +80,30 @@ describe('help-cmd', () => {
 
   it('shows the real config path', () => {
     expect(output).to.include(path.join(os.homedir(), '.arcq.json'));
+  });
+
+  it('shows the state directory and names ARCQ_HOME', () => {
+    expect(output).to.include('State directory');
+    expect(output).to.include(os.homedir());
+    expect(output).to.include('ARCQ_HOME');
+  });
+
+  it('reflects an ARCQ_HOME override in both paths', () => {
+    const override = path.join(os.tmpdir(), 'arcq-help-test-home');
+    process.env.ARCQ_HOME = override;
+    const help = captureHelp();
+    expect(help).to.include(override);
+    expect(help).to.include(path.join(override, '.arcq.json'));
+  });
+
+  it('keeps ARCQ_CONFIG winning over ARCQ_HOME', () => {
+    const home = path.join(os.tmpdir(), 'arcq-help-test-home');
+    const config = path.join(os.tmpdir(), 'arcq-help-test-explicit.json');
+    process.env.ARCQ_HOME = home;
+    process.env.ARCQ_CONFIG = config;
+    const help = captureHelp();
+    expect(help).to.include(config);
+    expect(help).to.not.include(path.join(home, '.arcq.json'));
   });
 
   it('reflects an ARCQ_CONFIG override in the config path', () => {

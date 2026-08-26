@@ -92,6 +92,16 @@ query/list/fields commands auto-refresh once on an exit-2 before giving up.
 (never the refresh token itself). Use `example.com` hosts and placeholder ids
 when demonstrating this to a user.
 
+## State directory
+
+arcq's config, context, cache, token, OAuth credential, and token-expiry files
+all live in the user's home directory unless `ARCQ_HOME` points at another
+directory, which holds a complete independent set. A user working with more
+than one portal should have one directory per portal - without that, the token
+stored for one portal is sent to whatever host the queried service lives on.
+`ARCQ_CONFIG` overrides the config file alone and wins over `ARCQ_HOME`; it
+does not isolate the token.
+
 ## TLS
 
 Certificates are verified by default. If a query fails with a TLS
