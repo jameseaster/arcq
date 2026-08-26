@@ -2,18 +2,13 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import { requestOAuthToken } from './arcgis-core.js';
 import { ArcqError } from './errors.js';
-import {
-  ensureStateDir,
-  resolveOAuthPath,
-  resolveTokenMetaPath,
-} from './paths-core.js';
-import { getToken, setTokenValue } from './token-core.js';
+import { ensureStateDir, resolveOAuthPath } from './paths-core.js';
+import { getToken, saveTokenMeta, setTokenValue } from './token-core.js';
 import type { OAuthTokenError, OAuthTokenResponse } from './types.js';
 
 // OAuth credentials live in their own file, separate from the plain access
 // token in .arcq-token, so the token file's format stays backward compatible.
-// The access token's expiry is tracked in a third file so `token show` can
-// report how much life is left without decoding the (opaque) token itself.
+// The access token's own metadata lives with the token, in token-core.
 
 export interface OAuthConfig {
   portalUrl: string;
@@ -25,11 +20,6 @@ export interface OAuthConfig {
   refreshTokenCommand?: string;
   // Epoch ms the refresh token itself expires (best-effort, from the blob).
   refreshTokenExpires?: number;
-}
-
-export interface TokenMeta {
-  // Epoch ms the current access token expires.
-  expires: number;
 }
 
 // A missing or unreadable oauth file means "feature not configured", never an
@@ -59,25 +49,6 @@ export function saveOAuth(config: OAuthConfig): void {
   const oauthPath = resolveOAuthPath();
   fs.writeFileSync(oauthPath, JSON.stringify(config, null, 2), { mode: 0o600 });
   fs.chmodSync(oauthPath, 0o600);
-}
-
-export function loadTokenMeta(): TokenMeta | null {
-  try {
-    const parsed = JSON.parse(
-      fs.readFileSync(resolveTokenMetaPath(), 'utf-8')
-    ) as TokenMeta;
-    if (!parsed || typeof parsed.expires !== 'number') return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-export function saveTokenMeta(meta: TokenMeta): void {
-  ensureStateDir();
-  const tokenMetaPath = resolveTokenMetaPath();
-  fs.writeFileSync(tokenMetaPath, JSON.stringify(meta), { mode: 0o600 });
-  fs.chmodSync(tokenMetaPath, 0o600);
 }
 
 export interface ParsedBlob {

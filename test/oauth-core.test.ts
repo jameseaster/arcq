@@ -1,12 +1,10 @@
 import * as chai from 'chai';
 import fs from 'fs';
-import { getToken } from '../lib/token-core.js';
+import { getToken, loadTokenMeta } from '../lib/token-core.js';
 import { ArcqError } from '../lib/errors.js';
 import {
   loadOAuth,
   saveOAuth,
-  loadTokenMeta,
-  saveTokenMeta,
   parseEsriOAuthBlob,
   refreshTokenFrom,
   performRefresh,
@@ -15,7 +13,7 @@ import {
   type OAuthConfig,
 } from '../lib/oauth-core.js';
 import type { OAuthTokenResponse } from '../lib/types.js';
-import { resolveOAuthPath, resolveTokenMetaPath } from '../lib/paths-core.js';
+import { resolveOAuthPath } from '../lib/paths-core.js';
 import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
@@ -69,27 +67,6 @@ describe('oauth-core', () => {
     it('reports configured once a valid file exists', () => {
       saveOAuth({ portalUrl: 'https://portal.example.com', appId: 'a' });
       expect(isOAuthConfigured()).to.be.true;
-    });
-  });
-
-  describe('token meta', () => {
-    it('round-trips saved meta', () => {
-      saveTokenMeta({ expires: 1234 });
-      expect(loadTokenMeta()).to.deep.equal({ expires: 1234 });
-    });
-
-    it('writes the meta file with mode 600', () => {
-      saveTokenMeta({ expires: 1 });
-      expect(fs.statSync(resolveTokenMetaPath()).mode & 0o777).to.equal(0o600);
-    });
-
-    it('treats a missing meta file as absent', () => {
-      expect(loadTokenMeta()).to.be.null;
-    });
-
-    it('treats corrupt meta as absent', () => {
-      fs.writeFileSync(resolveTokenMetaPath(), 'nope');
-      expect(loadTokenMeta()).to.be.null;
     });
   });
 

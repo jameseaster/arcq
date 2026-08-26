@@ -1,12 +1,7 @@
 import * as chai from 'chai';
-import { getToken } from '../lib/token-core.js';
+import { getToken, loadTokenMeta } from '../lib/token-core.js';
 import { ArcqError } from '../lib/errors.js';
-import {
-  loadOAuth,
-  loadTokenMeta,
-  saveOAuth,
-  type OAuthConfig,
-} from '../lib/oauth-core.js';
+import { loadOAuth, saveOAuth, type OAuthConfig } from '../lib/oauth-core.js';
 import tokenRefreshCmd from '../lib/token-refresh-cmd.js';
 import type { OAuthTokenResponse } from '../lib/types.js';
 import { useTempStateDir } from './state-dir.js';

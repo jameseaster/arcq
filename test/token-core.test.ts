@@ -1,7 +1,12 @@
 import * as chai from 'chai';
 import fs from 'fs';
-import { getToken, setTokenValue } from '../lib/token-core.js';
-import { resolveTokenPath } from '../lib/paths-core.js';
+import {
+  getToken,
+  loadTokenMeta,
+  saveTokenMeta,
+  setTokenValue,
+} from '../lib/token-core.js';
+import { resolveTokenMetaPath, resolveTokenPath } from '../lib/paths-core.js';
 import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
@@ -65,6 +70,27 @@ describe('token-core', () => {
     it('getToken returns what setTokenValue wrote', () => {
       setTokenValue('round-trip-token');
       expect(getToken()).to.equal('round-trip-token');
+    });
+  });
+
+  describe('token meta', () => {
+    it('round-trips saved meta', () => {
+      saveTokenMeta({ expires: 1234 });
+      expect(loadTokenMeta()).to.deep.equal({ expires: 1234 });
+    });
+
+    it('writes the meta file with mode 600', () => {
+      saveTokenMeta({ expires: 1 });
+      expect(fs.statSync(resolveTokenMetaPath()).mode & 0o777).to.equal(0o600);
+    });
+
+    it('treats a missing meta file as absent', () => {
+      expect(loadTokenMeta()).to.be.null;
+    });
+
+    it('treats corrupt meta as absent', () => {
+      fs.writeFileSync(resolveTokenMetaPath(), 'nope');
+      expect(loadTokenMeta()).to.be.null;
     });
   });
 });
