@@ -7,10 +7,17 @@ import {
   queryLayer,
 } from '../lib/arcgis-core.js';
 import { ArcqError } from '../lib/errors.js';
+import {
+  resetBindingNotices,
+  setAllowCrossHost,
+} from '../lib/token-binding.js';
+import { saveTokenMeta } from '../lib/token-core.js';
+import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
 
 describe('arcgis-core', () => {
+  useTempStateDir();
   let server: http.Server;
   let baseUrl: string;
   let handler: (req: http.IncomingMessage, res: http.ServerResponse) => void;
@@ -49,6 +56,11 @@ describe('arcgis-core', () => {
   beforeEach(() => {
     lastRequest = null;
     lastBody = null;
+    resetBindingNotices();
+  });
+
+  afterEach(() => {
+    resetBindingNotices();
   });
 
   // ---------------------------------------------------------------------------
@@ -318,6 +330,92 @@ describe('arcgis-core', () => {
       }
       expect(thrown).to.be.instanceOf(ArcqError);
       expect((thrown as ArcqError).exitCode).to.equal(2);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+
+  // postForm is the single choke point every arcq request passes through, so
+  // the token-host binding is enforced there and asserted here.
+  describe('token host binding', () => {
+    let errs: string[];
+    let originalError: typeof console.error;
+
+    beforeEach(() => {
+      errs = [];
+      originalError = console.error;
+      console.error = (...args) => errs.push(args.join(' '));
+    });
+
+    afterEach(() => {
+      console.error = originalError;
+    });
+
+    it('sends the token when the target is the host it was issued for', async () => {
+      saveTokenMeta({ expires: 1, host: '127.0.0.1' });
+      respond({ name: 'ok' });
+      await validateToken(baseUrl, 'tok');
+      expect(lastBody!.get('token')).to.equal('tok');
+    });
+
+    it('omits the token when the target is a different host', async () => {
+      saveTokenMeta({ expires: 1, host: 'portal.example.com' });
+      respond({ name: 'ok' });
+      await validateToken(baseUrl, 'tok');
+      expect(lastBody!.has('token')).to.equal(false);
+      expect(errs.join(' ')).to.include('omitting the token');
+    });
+
+    it('still sends every other param when the token is dropped', async () => {
+      saveTokenMeta({ expires: 1, host: 'portal.example.com' });
+      respond({ name: 'ok' });
+      await validateToken(baseUrl, 'tok');
+      expect(lastBody!.get('f')).to.equal('json');
+    });
+
+    it('applies to the catalog request', async () => {
+      saveTokenMeta({ expires: 1, host: 'portal.example.com' });
+      respond({ layers: [], tables: [] });
+      await fetchServiceCatalog(baseUrl, 'tok');
+      expect(lastBody!.has('token')).to.equal(false);
+    });
+
+    it('applies to the field-metadata request', async () => {
+      saveTokenMeta({ expires: 1, host: 'portal.example.com' });
+      respond({ fields: [] });
+      await fetchLayerMetadata(baseUrl, 'tok');
+      expect(lastBody!.has('token')).to.equal(false);
+    });
+
+    it('applies to the query request, where the token rides in the params', async () => {
+      saveTokenMeta({ expires: 1, host: 'portal.example.com' });
+      respond({ features: [] });
+      await queryLayer(baseUrl, { f: 'json', where: '1=1', token: 'tok' });
+      expect(lastBody!.has('token')).to.equal(false);
+      expect(lastBody!.get('where')).to.equal('1=1');
+    });
+
+    it('leaves an anonymous request alone and stays silent', async () => {
+      saveTokenMeta({ expires: 1, host: 'portal.example.com' });
+      respond({ name: 'ok' });
+      await validateToken(baseUrl, null);
+      expect(lastBody!.has('token')).to.equal(false);
+      expect(errs).to.be.empty;
+    });
+
+    it('sends the token when no host is recorded, as before the binding', async () => {
+      respond({ name: 'ok' });
+      await validateToken(baseUrl, 'tok');
+      expect(lastBody!.get('token')).to.equal('tok');
+    });
+
+    it('sends the token cross-host once --allow-cross-host is set', async () => {
+      saveTokenMeta({ expires: 1, host: 'portal.example.com' });
+      setAllowCrossHost(true);
+      respond({ name: 'ok' });
+      await validateToken(baseUrl, 'tok');
+      expect(lastBody!.get('token')).to.equal('tok');
+      expect(errs.join(' ')).to.include('WARNING');
     });
   });
 });
