@@ -7,7 +7,8 @@ import { loadContext } from '../lib/context-core.js';
 import interactiveCmd from '../lib/interactive-cmd.js';
 import { ArcqError } from '../lib/errors.js';
 import type { Cache } from '../lib/types.js';
-import { resolveCachePath, resolveContextPath } from '../lib/paths-core.js';
+import { resolveContextPath } from '../lib/paths-core.js';
+import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
 
@@ -30,8 +31,8 @@ const FAKE_CACHE = {
 } as unknown as Cache;
 
 describe('interactive-cmd', () => {
-  let cacheBackup: string | null;
-  let contextBackup: string | null;
+  useTempStateDir();
+
   let originalPath: string | undefined;
   let originalEnv: string | undefined;
 
@@ -54,16 +55,6 @@ describe('interactive-cmd', () => {
   });
 
   beforeEach(() => {
-    cacheBackup = fs.existsSync(resolveCachePath())
-      ? fs.readFileSync(resolveCachePath(), 'utf-8')
-      : null;
-    contextBackup = fs.existsSync(resolveContextPath())
-      ? fs.readFileSync(resolveContextPath(), 'utf-8')
-      : null;
-    if (fs.existsSync(resolveCachePath())) fs.unlinkSync(resolveCachePath());
-    if (fs.existsSync(resolveContextPath()))
-      fs.unlinkSync(resolveContextPath());
-
     originalPath = process.env.PATH;
     process.env.PATH = `${FAKE_FZF_DIR}:${process.env.PATH}`;
     delete process.env.ARCQ_TEST_SELECT;
@@ -83,18 +74,6 @@ describe('interactive-cmd', () => {
       process.env.ARCQ_CONFIG = originalEnv;
     }
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
-
-    if (cacheBackup !== null) {
-      fs.writeFileSync(resolveCachePath(), cacheBackup);
-    } else if (fs.existsSync(resolveCachePath())) {
-      fs.unlinkSync(resolveCachePath());
-    }
-
-    if (contextBackup !== null) {
-      fs.writeFileSync(resolveContextPath(), contextBackup);
-    } else if (fs.existsSync(resolveContextPath())) {
-      fs.unlinkSync(resolveContextPath());
-    }
   });
 
   it('saves the selected layer as the active context', async () => {

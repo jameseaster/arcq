@@ -15,11 +15,8 @@ import {
   type OAuthConfig,
 } from '../lib/oauth-core.js';
 import type { OAuthTokenResponse } from '../lib/types.js';
-import {
-  resolveOAuthPath,
-  resolveTokenMetaPath,
-  resolveTokenPath,
-} from '../lib/paths-core.js';
+import { resolveOAuthPath, resolveTokenMetaPath } from '../lib/paths-core.js';
+import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
 
@@ -29,37 +26,7 @@ function blob(entries: Record<string, unknown>): string {
 }
 
 describe('oauth-core', () => {
-  let oauthBackup: string | null;
-  let metaBackup: string | null;
-  let tokenBackup: string | null;
-
-  function snapshot(p: string): string | null {
-    return fs.existsSync(p) ? fs.readFileSync(p, 'utf-8') : null;
-  }
-
-  function restore(p: string, backup: string | null): void {
-    if (backup !== null) fs.writeFileSync(p, backup);
-    else if (fs.existsSync(p)) fs.unlinkSync(p);
-  }
-
-  beforeEach(() => {
-    oauthBackup = snapshot(resolveOAuthPath());
-    metaBackup = snapshot(resolveTokenMetaPath());
-    tokenBackup = snapshot(resolveTokenPath());
-    for (const p of [
-      resolveOAuthPath(),
-      resolveTokenMetaPath(),
-      resolveTokenPath(),
-    ]) {
-      if (fs.existsSync(p)) fs.unlinkSync(p);
-    }
-  });
-
-  afterEach(() => {
-    restore(resolveOAuthPath(), oauthBackup);
-    restore(resolveTokenMetaPath(), metaBackup);
-    restore(resolveTokenPath(), tokenBackup);
-  });
+  useTempStateDir();
 
   describe('oauth storage', () => {
     it('round-trips a saved config', () => {

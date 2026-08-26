@@ -3,24 +3,21 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { loadConfig } from '../lib/config-core.js';
+import { resolveConfigPath } from '../lib/paths-core.js';
+import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
 
-const DEFAULT_PATH = path.join(os.homedir(), '.arcq.json');
 const TEMP_CONFIG = path.join(os.tmpdir(), 'arcq-test-config.json');
 
 describe('config-core', () => {
+  useTempStateDir();
+
   let originalEnv: string | undefined;
-  let defaultBackup: string | null;
 
   beforeEach(() => {
     originalEnv = process.env.ARCQ_CONFIG;
     delete process.env.ARCQ_CONFIG;
-
-    defaultBackup = fs.existsSync(DEFAULT_PATH)
-      ? fs.readFileSync(DEFAULT_PATH, 'utf-8')
-      : null;
-    if (fs.existsSync(DEFAULT_PATH)) fs.unlinkSync(DEFAULT_PATH);
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
   });
 
@@ -31,12 +28,6 @@ describe('config-core', () => {
       process.env.ARCQ_CONFIG = originalEnv;
     }
 
-    if (defaultBackup !== null) {
-      fs.writeFileSync(DEFAULT_PATH, defaultBackup);
-    } else if (fs.existsSync(DEFAULT_PATH)) {
-      fs.unlinkSync(DEFAULT_PATH);
-    }
-
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
   });
 
@@ -44,9 +35,9 @@ describe('config-core', () => {
     expect(loadConfig()).to.deep.equal({});
   });
 
-  it('reads ~/.arcq.json by default when ARCQ_CONFIG is not set', () => {
+  it('reads the state directory config when ARCQ_CONFIG is not set', () => {
     const config = { services: { svc: 'https://example.com' } };
-    fs.writeFileSync(DEFAULT_PATH, JSON.stringify(config));
+    fs.writeFileSync(resolveConfigPath(), JSON.stringify(config));
     expect(loadConfig()).to.deep.equal(config);
   });
 

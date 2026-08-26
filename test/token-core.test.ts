@@ -2,26 +2,12 @@ import * as chai from 'chai';
 import fs from 'fs';
 import { getToken, setTokenValue } from '../lib/token-core.js';
 import { resolveTokenPath } from '../lib/paths-core.js';
+import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
 
 describe('token-core', () => {
-  let backup: string | null;
-
-  beforeEach(() => {
-    backup = fs.existsSync(resolveTokenPath())
-      ? fs.readFileSync(resolveTokenPath(), 'utf-8')
-      : null;
-    if (fs.existsSync(resolveTokenPath())) fs.unlinkSync(resolveTokenPath());
-  });
-
-  afterEach(() => {
-    if (backup !== null) {
-      fs.writeFileSync(resolveTokenPath(), backup);
-    } else if (fs.existsSync(resolveTokenPath())) {
-      fs.unlinkSync(resolveTokenPath());
-    }
-  });
+  useTempStateDir();
 
   describe('getToken', () => {
     it('returns null when no token file exists', () => {
@@ -40,7 +26,7 @@ describe('token-core', () => {
   });
 
   describe('setTokenValue', () => {
-    it('writes the token to resolveTokenPath()', () => {
+    it('writes the token to the resolved token path', () => {
       setTokenValue('new-token');
       expect(fs.readFileSync(resolveTokenPath(), 'utf-8')).to.equal(
         'new-token'

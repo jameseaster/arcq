@@ -3,11 +3,13 @@ import fs from 'fs';
 import activeCmd from '../lib/active-cmd.js';
 import type { Context } from '../lib/types.js';
 import { resolveContextPath } from '../lib/paths-core.js';
+import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
 
 describe('active-cmd', () => {
-  let contextBackup: string | null;
+  useTempStateDir();
+
   let logs: string[];
   let originalLog: typeof console.log;
 
@@ -16,12 +18,6 @@ describe('active-cmd', () => {
   }
 
   beforeEach(() => {
-    contextBackup = fs.existsSync(resolveContextPath())
-      ? fs.readFileSync(resolveContextPath(), 'utf-8')
-      : null;
-    if (fs.existsSync(resolveContextPath()))
-      fs.unlinkSync(resolveContextPath());
-
     logs = [];
     originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
@@ -29,12 +25,6 @@ describe('active-cmd', () => {
 
   afterEach(() => {
     console.log = originalLog;
-
-    if (contextBackup !== null) {
-      fs.writeFileSync(resolveContextPath(), contextBackup);
-    } else if (fs.existsSync(resolveContextPath())) {
-      fs.unlinkSync(resolveContextPath());
-    }
   });
 
   it('prints service:id → name and the url for a full context', () => {

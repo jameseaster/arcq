@@ -1,5 +1,4 @@
 import * as chai from 'chai';
-import fs from 'fs';
 import { getToken } from '../lib/token-core.js';
 import { ArcqError } from '../lib/errors.js';
 import {
@@ -10,11 +9,7 @@ import {
 } from '../lib/oauth-core.js';
 import tokenRefreshCmd from '../lib/token-refresh-cmd.js';
 import type { OAuthTokenResponse } from '../lib/types.js';
-import {
-  resolveOAuthPath,
-  resolveTokenMetaPath,
-  resolveTokenPath,
-} from '../lib/paths-core.js';
+import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
 
@@ -25,7 +20,8 @@ const CONFIG: OAuthConfig = {
 };
 
 describe('token-refresh-cmd', () => {
-  let backups: Record<string, string | null>;
+  useTempStateDir();
+
   let logs: string[];
   let originalLog: typeof console.log;
 
@@ -34,15 +30,6 @@ describe('token-refresh-cmd', () => {
   }
 
   beforeEach(() => {
-    backups = {};
-    for (const p of [
-      resolveOAuthPath(),
-      resolveTokenMetaPath(),
-      resolveTokenPath(),
-    ]) {
-      backups[p] = fs.existsSync(p) ? fs.readFileSync(p, 'utf-8') : null;
-      if (fs.existsSync(p)) fs.unlinkSync(p);
-    }
     logs = [];
     originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
@@ -50,15 +37,6 @@ describe('token-refresh-cmd', () => {
 
   afterEach(() => {
     console.log = originalLog;
-    for (const p of [
-      resolveOAuthPath(),
-      resolveTokenMetaPath(),
-      resolveTokenPath(),
-    ]) {
-      const backup = backups[p];
-      if (backup != null) fs.writeFileSync(p, backup);
-      else if (fs.existsSync(p)) fs.unlinkSync(p);
-    }
   });
 
   it('saves the token and meta and prints the expiry on success', async () => {

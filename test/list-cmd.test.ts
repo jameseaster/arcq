@@ -4,11 +4,8 @@ import path from 'path';
 import os from 'os';
 import http from 'http';
 import listCmd from '../lib/list-cmd.js';
-import {
-  resolveOAuthPath,
-  resolveTokenMetaPath,
-  resolveTokenPath,
-} from '../lib/paths-core.js';
+import { resolveTokenPath } from '../lib/paths-core.js';
+import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
 
@@ -23,13 +20,12 @@ const CATALOG_RESPONSE = {
 };
 
 describe('list-cmd', () => {
+  useTempStateDir();
+
   let server: http.Server;
   let serviceUrl: string;
   let requests: http.IncomingMessage[];
   let originalEnv: string | undefined;
-  let tokenBackup: string | null;
-  let oauthBackup: string | null;
-  let tokenMetaBackup: string | null;
   let logs: string[];
   let originalLog: typeof console.log;
 
@@ -68,23 +64,6 @@ describe('list-cmd', () => {
     delete process.env.ARCQ_CONFIG;
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
 
-    tokenBackup = fs.existsSync(resolveTokenPath())
-      ? fs.readFileSync(resolveTokenPath(), 'utf-8')
-      : null;
-    if (fs.existsSync(resolveTokenPath())) fs.unlinkSync(resolveTokenPath());
-
-    // Isolate the developer's real OAuth setup: with it present, the exit-2
-    // path would trigger a real credential-command run and portal request.
-    oauthBackup = fs.existsSync(resolveOAuthPath())
-      ? fs.readFileSync(resolveOAuthPath(), 'utf-8')
-      : null;
-    tokenMetaBackup = fs.existsSync(resolveTokenMetaPath())
-      ? fs.readFileSync(resolveTokenMetaPath(), 'utf-8')
-      : null;
-    if (fs.existsSync(resolveOAuthPath())) fs.unlinkSync(resolveOAuthPath());
-    if (fs.existsSync(resolveTokenMetaPath()))
-      fs.unlinkSync(resolveTokenMetaPath());
-
     logs = [];
     originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
@@ -99,24 +78,6 @@ describe('list-cmd', () => {
       process.env.ARCQ_CONFIG = originalEnv;
     }
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
-
-    if (tokenBackup !== null) {
-      fs.writeFileSync(resolveTokenPath(), tokenBackup);
-    } else if (fs.existsSync(resolveTokenPath())) {
-      fs.unlinkSync(resolveTokenPath());
-    }
-
-    if (oauthBackup !== null) {
-      fs.writeFileSync(resolveOAuthPath(), oauthBackup);
-    } else if (fs.existsSync(resolveOAuthPath())) {
-      fs.unlinkSync(resolveOAuthPath());
-    }
-
-    if (tokenMetaBackup !== null) {
-      fs.writeFileSync(resolveTokenMetaPath(), tokenMetaBackup);
-    } else if (fs.existsSync(resolveTokenMetaPath())) {
-      fs.unlinkSync(resolveTokenMetaPath());
-    }
   });
 
   function writeConfig(services: Record<string, string>) {

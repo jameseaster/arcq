@@ -8,12 +8,8 @@ import {
   type RefreshResult,
 } from '../lib/oauth-core.js';
 import tokenConnectCmd from '../lib/token-connect-cmd.js';
-import {
-  resolveContextPath,
-  resolveOAuthPath,
-  resolveTokenMetaPath,
-  resolveTokenPath,
-} from '../lib/paths-core.js';
+import { resolveOAuthPath } from '../lib/paths-core.js';
+import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
 
@@ -36,23 +32,12 @@ function blob(entries: Record<string, unknown>): string {
 }
 
 describe('token-connect-cmd', () => {
-  let backups: Record<string, string | null>;
+  useTempStateDir();
+
   let logs: string[];
   let originalLog: typeof console.log;
 
-  const paths = [
-    resolveOAuthPath(),
-    resolveTokenMetaPath(),
-    resolveTokenPath(),
-    resolveContextPath(),
-  ];
-
   beforeEach(() => {
-    backups = {};
-    for (const p of paths) {
-      backups[p] = fs.existsSync(p) ? fs.readFileSync(p, 'utf-8') : null;
-      if (fs.existsSync(p)) fs.unlinkSync(p);
-    }
     logs = [];
     originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
@@ -60,11 +45,6 @@ describe('token-connect-cmd', () => {
 
   afterEach(() => {
     console.log = originalLog;
-    for (const p of paths) {
-      const backup = backups[p];
-      if (backup != null) fs.writeFileSync(p, backup);
-      else if (fs.existsSync(p)) fs.unlinkSync(p);
-    }
   });
 
   it('parses a pasted blob and stores portalUrl, appId, refreshToken', async () => {
