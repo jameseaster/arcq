@@ -3,9 +3,9 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import http from 'http';
-import { tokenPath } from '../lib/token-core.js';
 import syncCmd from '../lib/sync-cmd.js';
 import type { Config } from '../lib/types.js';
+import { resolveTokenPath } from '../lib/paths-core.js';
 
 const { expect } = chai;
 
@@ -72,10 +72,10 @@ describe('sync-cmd', () => {
     if (fs.existsSync(DEFAULT_PATH)) fs.unlinkSync(DEFAULT_PATH);
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
 
-    tokenBackup = fs.existsSync(tokenPath)
-      ? fs.readFileSync(tokenPath, 'utf-8')
+    tokenBackup = fs.existsSync(resolveTokenPath())
+      ? fs.readFileSync(resolveTokenPath(), 'utf-8')
       : null;
-    if (fs.existsSync(tokenPath)) fs.unlinkSync(tokenPath);
+    if (fs.existsSync(resolveTokenPath())) fs.unlinkSync(resolveTokenPath());
 
     logs = [];
     errors = [];
@@ -104,9 +104,9 @@ describe('sync-cmd', () => {
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
 
     if (tokenBackup !== null) {
-      fs.writeFileSync(tokenPath, tokenBackup);
-    } else if (fs.existsSync(tokenPath)) {
-      fs.unlinkSync(tokenPath);
+      fs.writeFileSync(resolveTokenPath(), tokenBackup);
+    } else if (fs.existsSync(resolveTokenPath())) {
+      fs.unlinkSync(resolveTokenPath());
     }
   });
 
@@ -184,7 +184,7 @@ describe('sync-cmd', () => {
   });
 
   it('passes the stored token with each request', async () => {
-    fs.writeFileSync(tokenPath, 'sync-token');
+    fs.writeFileSync(resolveTokenPath(), 'sync-token');
     writeConfig({ services: { 'my-service': serviceUrl } });
     await syncCmd();
     const params = (requests[0] as unknown as { bodyParams: URLSearchParams })

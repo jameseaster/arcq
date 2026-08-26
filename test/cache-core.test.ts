@@ -1,7 +1,8 @@
 import * as chai from 'chai';
 import fs from 'fs';
-import { CACHE_PATH, loadCache, saveCache } from '../lib/cache-core.js';
+import { loadCache, saveCache } from '../lib/cache-core.js';
 import type { Cache } from '../lib/types.js';
+import { resolveCachePath } from '../lib/paths-core.js';
 
 const { expect } = chai;
 
@@ -9,17 +10,17 @@ describe('cache-core', () => {
   let backup: string | null;
 
   beforeEach(() => {
-    backup = fs.existsSync(CACHE_PATH)
-      ? fs.readFileSync(CACHE_PATH, 'utf-8')
+    backup = fs.existsSync(resolveCachePath())
+      ? fs.readFileSync(resolveCachePath(), 'utf-8')
       : null;
-    if (fs.existsSync(CACHE_PATH)) fs.unlinkSync(CACHE_PATH);
+    if (fs.existsSync(resolveCachePath())) fs.unlinkSync(resolveCachePath());
   });
 
   afterEach(() => {
     if (backup !== null) {
-      fs.writeFileSync(CACHE_PATH, backup);
-    } else if (fs.existsSync(CACHE_PATH)) {
-      fs.unlinkSync(CACHE_PATH);
+      fs.writeFileSync(resolveCachePath(), backup);
+    } else if (fs.existsSync(resolveCachePath())) {
+      fs.unlinkSync(resolveCachePath());
     }
   });
 
@@ -30,27 +31,27 @@ describe('cache-core', () => {
 
     it('returns the parsed cache when the file exists', () => {
       const data = { 'my-service': [{ id: 0, name: 'Parcels' }] };
-      fs.writeFileSync(CACHE_PATH, JSON.stringify(data));
+      fs.writeFileSync(resolveCachePath(), JSON.stringify(data));
       expect(loadCache()).to.deep.equal(data);
     });
   });
 
   describe('saveCache', () => {
-    it('writes the cache as JSON to CACHE_PATH', () => {
+    it('writes the cache as JSON to resolveCachePath()', () => {
       const data = { 'my-service': [{ id: 0, name: 'Parcels' }] };
       saveCache(data as unknown as Cache);
-      expect(JSON.parse(fs.readFileSync(CACHE_PATH, 'utf-8'))).to.deep.equal(
-        data
-      );
+      expect(
+        JSON.parse(fs.readFileSync(resolveCachePath(), 'utf-8'))
+      ).to.deep.equal(data);
     });
 
     it('overwrites an existing cache file', () => {
-      fs.writeFileSync(CACHE_PATH, JSON.stringify({ old: [] }));
+      fs.writeFileSync(resolveCachePath(), JSON.stringify({ old: [] }));
       const data = { new: [{ id: 1, name: 'Roads' }] };
       saveCache(data as unknown as Cache);
-      expect(JSON.parse(fs.readFileSync(CACHE_PATH, 'utf-8'))).to.deep.equal(
-        data
-      );
+      expect(
+        JSON.parse(fs.readFileSync(resolveCachePath(), 'utf-8'))
+      ).to.deep.equal(data);
     });
   });
 

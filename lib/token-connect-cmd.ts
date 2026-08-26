@@ -4,13 +4,13 @@ import { loadContext } from './context-core.js';
 import { ArcqError } from './errors.js';
 import { makePrompter } from './prompt-core.js';
 import {
-  oauthPath,
   parseEsriOAuthBlob,
   performRefresh,
   saveOAuth,
   type OAuthConfig,
   type RefreshResult,
 } from './oauth-core.js';
+import { resolveOAuthPath } from './paths-core.js';
 import { getToken } from './token-core.js';
 
 export interface ConnectDeps {
@@ -153,6 +153,9 @@ async function runConnect(
 
   // Save, then validate. On failure, restore whatever oauth file was there
   // before so a botched connect never clobbers a working setup.
+  // Resolved once so the backup and the restore below cannot target different
+  // files if the environment changes mid-command.
+  const oauthPath = resolveOAuthPath();
   const prior = fs.existsSync(oauthPath)
     ? fs.readFileSync(oauthPath, 'utf-8')
     : null;

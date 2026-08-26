@@ -5,10 +5,10 @@ import os from 'os';
 import { run, resolveInsecure } from '../index.js';
 import { getHttpsAgent } from '../lib/tls-core.js';
 import { ArcqError } from '../lib/errors.js';
+import { resolveContextPath } from '../lib/paths-core.js';
 
 const { expect } = chai;
 
-const CONTEXT_PATH = path.join(os.homedir(), '.arcq-context.json');
 const TEMP_CONFIG = path.join(os.tmpdir(), 'arcq-index-test-config.json');
 
 describe('index', () => {
@@ -76,17 +76,18 @@ describe('index', () => {
     let contextBackup: string | null;
 
     beforeEach(() => {
-      contextBackup = fs.existsSync(CONTEXT_PATH)
-        ? fs.readFileSync(CONTEXT_PATH, 'utf-8')
+      contextBackup = fs.existsSync(resolveContextPath())
+        ? fs.readFileSync(resolveContextPath(), 'utf-8')
         : null;
-      if (fs.existsSync(CONTEXT_PATH)) fs.unlinkSync(CONTEXT_PATH);
+      if (fs.existsSync(resolveContextPath()))
+        fs.unlinkSync(resolveContextPath());
     });
 
     afterEach(() => {
       if (contextBackup !== null) {
-        fs.writeFileSync(CONTEXT_PATH, contextBackup);
-      } else if (fs.existsSync(CONTEXT_PATH)) {
-        fs.unlinkSync(CONTEXT_PATH);
+        fs.writeFileSync(resolveContextPath(), contextBackup);
+      } else if (fs.existsSync(resolveContextPath())) {
+        fs.unlinkSync(resolveContextPath());
       }
     });
 

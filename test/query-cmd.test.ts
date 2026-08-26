@@ -3,15 +3,20 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import http from 'http';
-import { tokenPath, getToken } from '../lib/token-core.js';
-import { oauthPath, tokenMetaPath, saveOAuth } from '../lib/oauth-core.js';
+import { getToken } from '../lib/token-core.js';
+import { saveOAuth } from '../lib/oauth-core.js';
 import queryCmd from '../lib/query-cmd.js';
 import { ArcqError } from '../lib/errors.js';
 import type { Context } from '../lib/types.js';
+import {
+  resolveContextPath,
+  resolveOAuthPath,
+  resolveTokenMetaPath,
+  resolveTokenPath,
+} from '../lib/paths-core.js';
 
 const { expect } = chai;
 
-const CONTEXT_PATH = path.join(os.homedir(), '.arcq-context.json');
 const TEMP_CONFIG = path.join(os.tmpdir(), 'arcq-test-config.json');
 
 describe('query-cmd', () => {
@@ -44,7 +49,7 @@ describe('query-cmd', () => {
   }
 
   function setContext(ctx: Context) {
-    fs.writeFileSync(CONTEXT_PATH, JSON.stringify(ctx));
+    fs.writeFileSync(resolveContextPath(), JSON.stringify(ctx));
   }
 
   function writeConfig(layers: Record<string, string>) {
@@ -86,23 +91,25 @@ describe('query-cmd', () => {
     delete process.env.ARCQ_CONFIG;
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
 
-    contextBackup = fs.existsSync(CONTEXT_PATH)
-      ? fs.readFileSync(CONTEXT_PATH, 'utf-8')
+    contextBackup = fs.existsSync(resolveContextPath())
+      ? fs.readFileSync(resolveContextPath(), 'utf-8')
       : null;
-    tokenBackup = fs.existsSync(tokenPath)
-      ? fs.readFileSync(tokenPath, 'utf-8')
+    tokenBackup = fs.existsSync(resolveTokenPath())
+      ? fs.readFileSync(resolveTokenPath(), 'utf-8')
       : null;
-    oauthBackup = fs.existsSync(oauthPath)
-      ? fs.readFileSync(oauthPath, 'utf-8')
+    oauthBackup = fs.existsSync(resolveOAuthPath())
+      ? fs.readFileSync(resolveOAuthPath(), 'utf-8')
       : null;
-    metaBackup = fs.existsSync(tokenMetaPath)
-      ? fs.readFileSync(tokenMetaPath, 'utf-8')
+    metaBackup = fs.existsSync(resolveTokenMetaPath())
+      ? fs.readFileSync(resolveTokenMetaPath(), 'utf-8')
       : null;
 
-    if (fs.existsSync(CONTEXT_PATH)) fs.unlinkSync(CONTEXT_PATH);
-    if (fs.existsSync(tokenPath)) fs.unlinkSync(tokenPath);
-    if (fs.existsSync(oauthPath)) fs.unlinkSync(oauthPath);
-    if (fs.existsSync(tokenMetaPath)) fs.unlinkSync(tokenMetaPath);
+    if (fs.existsSync(resolveContextPath()))
+      fs.unlinkSync(resolveContextPath());
+    if (fs.existsSync(resolveTokenPath())) fs.unlinkSync(resolveTokenPath());
+    if (fs.existsSync(resolveOAuthPath())) fs.unlinkSync(resolveOAuthPath());
+    if (fs.existsSync(resolveTokenMetaPath()))
+      fs.unlinkSync(resolveTokenMetaPath());
 
     logs = [];
     originalLog = console.log;
@@ -126,27 +133,27 @@ describe('query-cmd', () => {
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
 
     if (contextBackup !== null) {
-      fs.writeFileSync(CONTEXT_PATH, contextBackup);
-    } else if (fs.existsSync(CONTEXT_PATH)) {
-      fs.unlinkSync(CONTEXT_PATH);
+      fs.writeFileSync(resolveContextPath(), contextBackup);
+    } else if (fs.existsSync(resolveContextPath())) {
+      fs.unlinkSync(resolveContextPath());
     }
 
     if (tokenBackup !== null) {
-      fs.writeFileSync(tokenPath, tokenBackup);
-    } else if (fs.existsSync(tokenPath)) {
-      fs.unlinkSync(tokenPath);
+      fs.writeFileSync(resolveTokenPath(), tokenBackup);
+    } else if (fs.existsSync(resolveTokenPath())) {
+      fs.unlinkSync(resolveTokenPath());
     }
 
     if (oauthBackup !== null) {
-      fs.writeFileSync(oauthPath, oauthBackup);
-    } else if (fs.existsSync(oauthPath)) {
-      fs.unlinkSync(oauthPath);
+      fs.writeFileSync(resolveOAuthPath(), oauthBackup);
+    } else if (fs.existsSync(resolveOAuthPath())) {
+      fs.unlinkSync(resolveOAuthPath());
     }
 
     if (metaBackup !== null) {
-      fs.writeFileSync(tokenMetaPath, metaBackup);
-    } else if (fs.existsSync(tokenMetaPath)) {
-      fs.unlinkSync(tokenMetaPath);
+      fs.writeFileSync(resolveTokenMetaPath(), metaBackup);
+    } else if (fs.existsSync(resolveTokenMetaPath())) {
+      fs.unlinkSync(resolveTokenMetaPath());
     }
   });
 
@@ -249,7 +256,7 @@ describe('query-cmd', () => {
     });
 
     it('makes only the query request when a token is stored (no preflight)', async () => {
-      fs.writeFileSync(tokenPath, 'my-token');
+      fs.writeFileSync(resolveTokenPath(), 'my-token');
       setContext({ url: baseUrl });
       await queryCmd(['1=1']);
       expect(requests).to.have.length(1);
@@ -257,7 +264,7 @@ describe('query-cmd', () => {
     });
 
     it('includes the token in the query request', async () => {
-      fs.writeFileSync(tokenPath, 'my-token');
+      fs.writeFileSync(resolveTokenPath(), 'my-token');
       setContext({ url: baseUrl });
       await queryCmd(['1=1']);
       const queryReq = requests.find((r: http.IncomingMessage) =>

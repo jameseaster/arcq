@@ -1,13 +1,13 @@
 import * as chai from 'chai';
 import fs from 'fs';
-import { tokenPath, setTokenValue } from '../lib/token-core.js';
-import {
-  oauthPath,
-  tokenMetaPath,
-  saveOAuth,
-  saveTokenMeta,
-} from '../lib/oauth-core.js';
+import { setTokenValue } from '../lib/token-core.js';
+import { saveOAuth, saveTokenMeta } from '../lib/oauth-core.js';
 import tokenCmd from '../lib/token-cmd.js';
+import {
+  resolveOAuthPath,
+  resolveTokenMetaPath,
+  resolveTokenPath,
+} from '../lib/paths-core.js';
 
 const { expect } = chai;
 
@@ -18,7 +18,11 @@ describe('token-cmd', () => {
   let originalLog: typeof console.log;
   let originalError: typeof console.error;
 
-  const paths = [tokenPath, oauthPath, tokenMetaPath];
+  const paths = [
+    resolveTokenPath(),
+    resolveOAuthPath(),
+    resolveTokenMetaPath(),
+  ];
 
   beforeEach(() => {
     backups = {};
@@ -102,7 +106,7 @@ describe('token-cmd', () => {
   describe('set', () => {
     it('saves the token', async () => {
       await tokenCmd(['set', 'my-new-token']);
-      expect(fs.readFileSync(tokenPath, 'utf-8').trim()).to.equal(
+      expect(fs.readFileSync(resolveTokenPath(), 'utf-8').trim()).to.equal(
         'my-new-token'
       );
     });
@@ -116,7 +120,7 @@ describe('token-cmd', () => {
       await tokenCmd(['set'], {
         prompt: async () => '  prompted-token  ',
       });
-      expect(fs.readFileSync(tokenPath, 'utf-8').trim()).to.equal(
+      expect(fs.readFileSync(resolveTokenPath(), 'utf-8').trim()).to.equal(
         'prompted-token'
       );
     });
@@ -129,7 +133,7 @@ describe('token-cmd', () => {
         error = err;
       }
       expect(String(error)).to.include('no token provided');
-      expect(fs.existsSync(tokenPath)).to.equal(false);
+      expect(fs.existsSync(resolveTokenPath())).to.equal(false);
     });
   });
 

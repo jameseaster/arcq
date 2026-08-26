@@ -2,15 +2,15 @@ import * as chai from 'chai';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { CACHE_PATH, saveCache } from '../lib/cache-core.js';
+import { saveCache } from '../lib/cache-core.js';
 import { loadContext } from '../lib/context-core.js';
 import interactiveCmd from '../lib/interactive-cmd.js';
 import { ArcqError } from '../lib/errors.js';
 import type { Cache } from '../lib/types.js';
+import { resolveCachePath, resolveContextPath } from '../lib/paths-core.js';
 
 const { expect } = chai;
 
-const CONTEXT_PATH = path.join(os.homedir(), '.arcq-context.json');
 const TEMP_CONFIG = path.join(os.tmpdir(), 'arcq-test-use-config.json');
 
 // Fake fzf: if ARCQ_TEST_SELECT is set, grep for that string; otherwise head -1.
@@ -54,14 +54,15 @@ describe('interactive-cmd', () => {
   });
 
   beforeEach(() => {
-    cacheBackup = fs.existsSync(CACHE_PATH)
-      ? fs.readFileSync(CACHE_PATH, 'utf-8')
+    cacheBackup = fs.existsSync(resolveCachePath())
+      ? fs.readFileSync(resolveCachePath(), 'utf-8')
       : null;
-    contextBackup = fs.existsSync(CONTEXT_PATH)
-      ? fs.readFileSync(CONTEXT_PATH, 'utf-8')
+    contextBackup = fs.existsSync(resolveContextPath())
+      ? fs.readFileSync(resolveContextPath(), 'utf-8')
       : null;
-    if (fs.existsSync(CACHE_PATH)) fs.unlinkSync(CACHE_PATH);
-    if (fs.existsSync(CONTEXT_PATH)) fs.unlinkSync(CONTEXT_PATH);
+    if (fs.existsSync(resolveCachePath())) fs.unlinkSync(resolveCachePath());
+    if (fs.existsSync(resolveContextPath()))
+      fs.unlinkSync(resolveContextPath());
 
     originalPath = process.env.PATH;
     process.env.PATH = `${FAKE_FZF_DIR}:${process.env.PATH}`;
@@ -84,15 +85,15 @@ describe('interactive-cmd', () => {
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
 
     if (cacheBackup !== null) {
-      fs.writeFileSync(CACHE_PATH, cacheBackup);
-    } else if (fs.existsSync(CACHE_PATH)) {
-      fs.unlinkSync(CACHE_PATH);
+      fs.writeFileSync(resolveCachePath(), cacheBackup);
+    } else if (fs.existsSync(resolveCachePath())) {
+      fs.unlinkSync(resolveCachePath());
     }
 
     if (contextBackup !== null) {
-      fs.writeFileSync(CONTEXT_PATH, contextBackup);
-    } else if (fs.existsSync(CONTEXT_PATH)) {
-      fs.unlinkSync(CONTEXT_PATH);
+      fs.writeFileSync(resolveContextPath(), contextBackup);
+    } else if (fs.existsSync(resolveContextPath())) {
+      fs.unlinkSync(resolveContextPath());
     }
   });
 
@@ -140,7 +141,7 @@ describe('interactive-cmd', () => {
 
   it('overwrites an existing context', async () => {
     fs.writeFileSync(
-      CONTEXT_PATH,
+      resolveContextPath(),
       JSON.stringify({
         service: 'old',
         layerId: 99,

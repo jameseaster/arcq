@@ -5,7 +5,7 @@ import http from 'http';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { tokenPath } from '../lib/token-core.js';
+import { resolveTokenPath } from '../lib/paths-core.js';
 
 const { expect } = chai;
 
@@ -81,17 +81,17 @@ describe('bin/arcq', function () {
   });
 
   beforeEach(() => {
-    tokenBackup = fs.existsSync(tokenPath)
-      ? fs.readFileSync(tokenPath, 'utf-8')
+    tokenBackup = fs.existsSync(resolveTokenPath())
+      ? fs.readFileSync(resolveTokenPath(), 'utf-8')
       : null;
-    if (fs.existsSync(tokenPath)) fs.unlinkSync(tokenPath);
+    if (fs.existsSync(resolveTokenPath())) fs.unlinkSync(resolveTokenPath());
   });
 
   afterEach(() => {
     if (tokenBackup !== null) {
-      fs.writeFileSync(tokenPath, tokenBackup);
-    } else if (fs.existsSync(tokenPath)) {
-      fs.unlinkSync(tokenPath);
+      fs.writeFileSync(resolveTokenPath(), tokenBackup);
+    } else if (fs.existsSync(resolveTokenPath())) {
+      fs.unlinkSync(resolveTokenPath());
     }
   });
 

@@ -3,15 +3,18 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import http from 'http';
-import { tokenPath } from '../lib/token-core.js';
-import { oauthPath, tokenMetaPath } from '../lib/oauth-core.js';
 import fieldsCmd from '../lib/fields-cmd.js';
 import { ArcqError } from '../lib/errors.js';
 import type { Context } from '../lib/types.js';
+import {
+  resolveContextPath,
+  resolveOAuthPath,
+  resolveTokenMetaPath,
+  resolveTokenPath,
+} from '../lib/paths-core.js';
 
 const { expect } = chai;
 
-const CONTEXT_PATH = path.join(os.homedir(), '.arcq-context.json');
 const TEMP_CONFIG = path.join(os.tmpdir(), 'arcq-test-fields-config.json');
 
 const SERVER_FIELDS = [
@@ -63,7 +66,7 @@ describe('fields-cmd', () => {
   }
 
   function setContext(ctx: Context) {
-    fs.writeFileSync(CONTEXT_PATH, JSON.stringify(ctx));
+    fs.writeFileSync(resolveContextPath(), JSON.stringify(ctx));
   }
 
   function writeConfig(layers: Record<string, string>) {
@@ -103,25 +106,27 @@ describe('fields-cmd', () => {
     delete process.env.ARCQ_CONFIG;
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
 
-    contextBackup = fs.existsSync(CONTEXT_PATH)
-      ? fs.readFileSync(CONTEXT_PATH, 'utf-8')
+    contextBackup = fs.existsSync(resolveContextPath())
+      ? fs.readFileSync(resolveContextPath(), 'utf-8')
       : null;
-    tokenBackup = fs.existsSync(tokenPath)
-      ? fs.readFileSync(tokenPath, 'utf-8')
+    tokenBackup = fs.existsSync(resolveTokenPath())
+      ? fs.readFileSync(resolveTokenPath(), 'utf-8')
       : null;
     // Isolate the developer's real OAuth setup: with it present, the exit-2
     // path would trigger a real credential-command run and portal request.
-    oauthBackup = fs.existsSync(oauthPath)
-      ? fs.readFileSync(oauthPath, 'utf-8')
+    oauthBackup = fs.existsSync(resolveOAuthPath())
+      ? fs.readFileSync(resolveOAuthPath(), 'utf-8')
       : null;
-    tokenMetaBackup = fs.existsSync(tokenMetaPath)
-      ? fs.readFileSync(tokenMetaPath, 'utf-8')
+    tokenMetaBackup = fs.existsSync(resolveTokenMetaPath())
+      ? fs.readFileSync(resolveTokenMetaPath(), 'utf-8')
       : null;
 
-    if (fs.existsSync(CONTEXT_PATH)) fs.unlinkSync(CONTEXT_PATH);
-    if (fs.existsSync(tokenPath)) fs.unlinkSync(tokenPath);
-    if (fs.existsSync(oauthPath)) fs.unlinkSync(oauthPath);
-    if (fs.existsSync(tokenMetaPath)) fs.unlinkSync(tokenMetaPath);
+    if (fs.existsSync(resolveContextPath()))
+      fs.unlinkSync(resolveContextPath());
+    if (fs.existsSync(resolveTokenPath())) fs.unlinkSync(resolveTokenPath());
+    if (fs.existsSync(resolveOAuthPath())) fs.unlinkSync(resolveOAuthPath());
+    if (fs.existsSync(resolveTokenMetaPath()))
+      fs.unlinkSync(resolveTokenMetaPath());
 
     logs = [];
     originalLog = console.log;
@@ -139,27 +144,27 @@ describe('fields-cmd', () => {
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
 
     if (contextBackup !== null) {
-      fs.writeFileSync(CONTEXT_PATH, contextBackup);
-    } else if (fs.existsSync(CONTEXT_PATH)) {
-      fs.unlinkSync(CONTEXT_PATH);
+      fs.writeFileSync(resolveContextPath(), contextBackup);
+    } else if (fs.existsSync(resolveContextPath())) {
+      fs.unlinkSync(resolveContextPath());
     }
 
     if (tokenBackup !== null) {
-      fs.writeFileSync(tokenPath, tokenBackup);
-    } else if (fs.existsSync(tokenPath)) {
-      fs.unlinkSync(tokenPath);
+      fs.writeFileSync(resolveTokenPath(), tokenBackup);
+    } else if (fs.existsSync(resolveTokenPath())) {
+      fs.unlinkSync(resolveTokenPath());
     }
 
     if (oauthBackup !== null) {
-      fs.writeFileSync(oauthPath, oauthBackup);
-    } else if (fs.existsSync(oauthPath)) {
-      fs.unlinkSync(oauthPath);
+      fs.writeFileSync(resolveOAuthPath(), oauthBackup);
+    } else if (fs.existsSync(resolveOAuthPath())) {
+      fs.unlinkSync(resolveOAuthPath());
     }
 
     if (tokenMetaBackup !== null) {
-      fs.writeFileSync(tokenMetaPath, tokenMetaBackup);
-    } else if (fs.existsSync(tokenMetaPath)) {
-      fs.unlinkSync(tokenMetaPath);
+      fs.writeFileSync(resolveTokenMetaPath(), tokenMetaBackup);
+    } else if (fs.existsSync(resolveTokenMetaPath())) {
+      fs.unlinkSync(resolveTokenMetaPath());
     }
   });
 
@@ -181,7 +186,7 @@ describe('fields-cmd', () => {
   });
 
   it('sends f=json and the stored token', async () => {
-    fs.writeFileSync(tokenPath, 'my-token');
+    fs.writeFileSync(resolveTokenPath(), 'my-token');
     setContext({ url: baseUrl });
     await fieldsCmd([]);
     const params = (requests[0] as unknown as { bodyParams: URLSearchParams })

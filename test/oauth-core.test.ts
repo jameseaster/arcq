@@ -1,10 +1,8 @@
 import * as chai from 'chai';
 import fs from 'fs';
-import { tokenPath, getToken } from '../lib/token-core.js';
+import { getToken } from '../lib/token-core.js';
 import { ArcqError } from '../lib/errors.js';
 import {
-  oauthPath,
-  tokenMetaPath,
   loadOAuth,
   saveOAuth,
   loadTokenMeta,
@@ -17,6 +15,11 @@ import {
   type OAuthConfig,
 } from '../lib/oauth-core.js';
 import type { OAuthTokenResponse } from '../lib/types.js';
+import {
+  resolveOAuthPath,
+  resolveTokenMetaPath,
+  resolveTokenPath,
+} from '../lib/paths-core.js';
 
 const { expect } = chai;
 
@@ -40,18 +43,22 @@ describe('oauth-core', () => {
   }
 
   beforeEach(() => {
-    oauthBackup = snapshot(oauthPath);
-    metaBackup = snapshot(tokenMetaPath);
-    tokenBackup = snapshot(tokenPath);
-    for (const p of [oauthPath, tokenMetaPath, tokenPath]) {
+    oauthBackup = snapshot(resolveOAuthPath());
+    metaBackup = snapshot(resolveTokenMetaPath());
+    tokenBackup = snapshot(resolveTokenPath());
+    for (const p of [
+      resolveOAuthPath(),
+      resolveTokenMetaPath(),
+      resolveTokenPath(),
+    ]) {
       if (fs.existsSync(p)) fs.unlinkSync(p);
     }
   });
 
   afterEach(() => {
-    restore(oauthPath, oauthBackup);
-    restore(tokenMetaPath, metaBackup);
-    restore(tokenPath, tokenBackup);
+    restore(resolveOAuthPath(), oauthBackup);
+    restore(resolveTokenMetaPath(), metaBackup);
+    restore(resolveTokenPath(), tokenBackup);
   });
 
   describe('oauth storage', () => {
@@ -67,14 +74,14 @@ describe('oauth-core', () => {
 
     it('writes the oauth file with mode 600', () => {
       saveOAuth({ portalUrl: 'https://portal.example.com', appId: 'a' });
-      expect(fs.statSync(oauthPath).mode & 0o777).to.equal(0o600);
+      expect(fs.statSync(resolveOAuthPath()).mode & 0o777).to.equal(0o600);
     });
 
     it('tightens a pre-existing loosely-permissioned file to 600', () => {
-      fs.writeFileSync(oauthPath, '{}', { mode: 0o644 });
-      fs.chmodSync(oauthPath, 0o644);
+      fs.writeFileSync(resolveOAuthPath(), '{}', { mode: 0o644 });
+      fs.chmodSync(resolveOAuthPath(), 0o644);
       saveOAuth({ portalUrl: 'https://portal.example.com', appId: 'a' });
-      expect(fs.statSync(oauthPath).mode & 0o777).to.equal(0o600);
+      expect(fs.statSync(resolveOAuthPath()).mode & 0o777).to.equal(0o600);
     });
 
     it('treats a missing file as not configured', () => {
@@ -83,12 +90,12 @@ describe('oauth-core', () => {
     });
 
     it('treats a corrupt file as not configured', () => {
-      fs.writeFileSync(oauthPath, 'not json {');
+      fs.writeFileSync(resolveOAuthPath(), 'not json {');
       expect(loadOAuth()).to.be.null;
     });
 
     it('treats a file missing required fields as not configured', () => {
-      fs.writeFileSync(oauthPath, JSON.stringify({ appId: 'a' }));
+      fs.writeFileSync(resolveOAuthPath(), JSON.stringify({ appId: 'a' }));
       expect(loadOAuth()).to.be.null;
     });
 
@@ -106,7 +113,7 @@ describe('oauth-core', () => {
 
     it('writes the meta file with mode 600', () => {
       saveTokenMeta({ expires: 1 });
-      expect(fs.statSync(tokenMetaPath).mode & 0o777).to.equal(0o600);
+      expect(fs.statSync(resolveTokenMetaPath()).mode & 0o777).to.equal(0o600);
     });
 
     it('treats a missing meta file as absent', () => {
@@ -114,7 +121,7 @@ describe('oauth-core', () => {
     });
 
     it('treats corrupt meta as absent', () => {
-      fs.writeFileSync(tokenMetaPath, 'nope');
+      fs.writeFileSync(resolveTokenMetaPath(), 'nope');
       expect(loadTokenMeta()).to.be.null;
     });
   });
