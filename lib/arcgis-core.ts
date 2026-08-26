@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { ArcqError, tokenError } from './errors.js';
+import { tokenForUrl } from './token-binding.js';
 import { getHttpsAgent, tlsErrorMessage } from './tls-core.js';
 import type {
   ArcGisError,
@@ -37,13 +38,27 @@ function formBody(params: Record<string, unknown>): URLSearchParams {
   return body;
 }
 
+// Every outbound arcq request funnels through here, which makes it the one
+// place the token-host binding can be enforced without a caller being able to
+// forget it. `token` is the only param carrying the credential, so a param set
+// without one passes through untouched (the OAuth token endpoint, for one).
+function bindToken(
+  url: string,
+  params: Record<string, unknown>
+): Record<string, unknown> {
+  if (!('token' in params)) return params;
+  const token = params.token;
+  if (typeof token !== 'string' || !token) return params;
+  return { ...params, token: tokenForUrl(url, token) };
+}
+
 async function postForm<T>(
   url: string,
   params: Record<string, unknown>
 ): Promise<T> {
   const agent = getHttpsAgent();
   try {
-    const res = await axios.post<T>(url, formBody(params), {
+    const res = await axios.post<T>(url, formBody(bindToken(url, params)), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       ...(agent ? { httpsAgent: agent } : {}),
     });
