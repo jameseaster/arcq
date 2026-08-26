@@ -1,10 +1,8 @@
 import * as chai from 'chai';
 import fs from 'fs';
-import { tokenPath, getToken } from '../lib/token-core.js';
+import { getToken } from '../lib/token-core.js';
 import { ArcqError } from '../lib/errors.js';
 import {
-  oauthPath,
-  tokenMetaPath,
   loadOAuth,
   loadTokenMeta,
   saveOAuth,
@@ -12,6 +10,11 @@ import {
 } from '../lib/oauth-core.js';
 import tokenRefreshCmd from '../lib/token-refresh-cmd.js';
 import type { OAuthTokenResponse } from '../lib/types.js';
+import {
+  resolveOAuthPath,
+  resolveTokenMetaPath,
+  resolveTokenPath,
+} from '../lib/paths-core.js';
 
 const { expect } = chai;
 
@@ -32,7 +35,11 @@ describe('token-refresh-cmd', () => {
 
   beforeEach(() => {
     backups = {};
-    for (const p of [oauthPath, tokenMetaPath, tokenPath]) {
+    for (const p of [
+      resolveOAuthPath(),
+      resolveTokenMetaPath(),
+      resolveTokenPath(),
+    ]) {
       backups[p] = fs.existsSync(p) ? fs.readFileSync(p, 'utf-8') : null;
       if (fs.existsSync(p)) fs.unlinkSync(p);
     }
@@ -43,7 +50,11 @@ describe('token-refresh-cmd', () => {
 
   afterEach(() => {
     console.log = originalLog;
-    for (const p of [oauthPath, tokenMetaPath, tokenPath]) {
+    for (const p of [
+      resolveOAuthPath(),
+      resolveTokenMetaPath(),
+      resolveTokenPath(),
+    ]) {
       const backup = backups[p];
       if (backup != null) fs.writeFileSync(p, backup);
       else if (fs.existsSync(p)) fs.unlinkSync(p);

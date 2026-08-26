@@ -1,28 +1,26 @@
 import * as chai from 'chai';
 import fs from 'fs';
-import path from 'path';
-import os from 'os';
 import { loadContext, saveContext } from '../lib/context-core.js';
+import { resolveContextPath } from '../lib/paths-core.js';
 
 const { expect } = chai;
-
-const CONTEXT_PATH = path.join(os.homedir(), '.arcq-context.json');
 
 describe('context-core', () => {
   let backup: string | null;
 
   beforeEach(() => {
-    backup = fs.existsSync(CONTEXT_PATH)
-      ? fs.readFileSync(CONTEXT_PATH, 'utf-8')
+    backup = fs.existsSync(resolveContextPath())
+      ? fs.readFileSync(resolveContextPath(), 'utf-8')
       : null;
-    if (fs.existsSync(CONTEXT_PATH)) fs.unlinkSync(CONTEXT_PATH);
+    if (fs.existsSync(resolveContextPath()))
+      fs.unlinkSync(resolveContextPath());
   });
 
   afterEach(() => {
     if (backup !== null) {
-      fs.writeFileSync(CONTEXT_PATH, backup);
-    } else if (fs.existsSync(CONTEXT_PATH)) {
-      fs.unlinkSync(CONTEXT_PATH);
+      fs.writeFileSync(resolveContextPath(), backup);
+    } else if (fs.existsSync(resolveContextPath())) {
+      fs.unlinkSync(resolveContextPath());
     }
   });
 
@@ -38,13 +36,13 @@ describe('context-core', () => {
         name: 'Parcels',
         url: 'https://example.com/0',
       };
-      fs.writeFileSync(CONTEXT_PATH, JSON.stringify(ctx));
+      fs.writeFileSync(resolveContextPath(), JSON.stringify(ctx));
       expect(loadContext()).to.deep.equal(ctx);
     });
   });
 
   describe('saveContext', () => {
-    it('writes the context as JSON to CONTEXT_PATH', () => {
+    it('writes the context as JSON to resolveContextPath()', () => {
       const ctx = {
         service: 'svc',
         layerId: 1,
@@ -52,12 +50,17 @@ describe('context-core', () => {
         url: 'https://example.com/1',
       };
       saveContext(ctx);
-      const written = JSON.parse(fs.readFileSync(CONTEXT_PATH, 'utf-8'));
+      const written = JSON.parse(
+        fs.readFileSync(resolveContextPath(), 'utf-8')
+      );
       expect(written).to.deep.equal(ctx);
     });
 
     it('overwrites an existing context', () => {
-      fs.writeFileSync(CONTEXT_PATH, JSON.stringify({ service: 'old' }));
+      fs.writeFileSync(
+        resolveContextPath(),
+        JSON.stringify({ service: 'old' })
+      );
       const ctx = {
         service: 'new',
         layerId: 2,
@@ -65,9 +68,9 @@ describe('context-core', () => {
         url: 'https://example.com/2',
       };
       saveContext(ctx);
-      expect(JSON.parse(fs.readFileSync(CONTEXT_PATH, 'utf-8'))).to.deep.equal(
-        ctx
-      );
+      expect(
+        JSON.parse(fs.readFileSync(resolveContextPath(), 'utf-8'))
+      ).to.deep.equal(ctx);
     });
   });
 

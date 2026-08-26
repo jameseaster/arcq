@@ -1,22 +1,21 @@
 import * as chai from 'chai';
 import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import { tokenPath } from '../lib/token-core.js';
 import { ArcqError } from '../lib/errors.js';
 import {
-  oauthPath,
-  tokenMetaPath,
   loadOAuth,
   saveOAuth,
   type OAuthConfig,
   type RefreshResult,
 } from '../lib/oauth-core.js';
 import tokenConnectCmd from '../lib/token-connect-cmd.js';
+import {
+  resolveContextPath,
+  resolveOAuthPath,
+  resolveTokenMetaPath,
+  resolveTokenPath,
+} from '../lib/paths-core.js';
 
 const { expect } = chai;
-
-const CONTEXT_PATH = path.join(os.homedir(), '.arcq-context.json');
 
 // A queued fake prompt: each call returns the next answer in order.
 function promptQueue(answers: string[]): (q: string) => Promise<string> {
@@ -41,7 +40,12 @@ describe('token-connect-cmd', () => {
   let logs: string[];
   let originalLog: typeof console.log;
 
-  const paths = [oauthPath, tokenMetaPath, tokenPath, CONTEXT_PATH];
+  const paths = [
+    resolveOAuthPath(),
+    resolveTokenMetaPath(),
+    resolveTokenPath(),
+    resolveContextPath(),
+  ];
 
   beforeEach(() => {
     backups = {};
@@ -165,7 +169,7 @@ describe('token-connect-cmd', () => {
       prompt: promptQueue([raw]),
       refresh: okRefresh,
     });
-    expect(fs.statSync(oauthPath).mode & 0o777).to.equal(0o600);
+    expect(fs.statSync(resolveOAuthPath()).mode & 0o777).to.equal(0o600);
   });
 
   it('restores the prior oauth file when validation fails', async () => {

@@ -3,9 +3,9 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import http from 'http';
-import { CACHE_PATH, loadCache } from '../lib/cache-core.js';
-import { tokenPath } from '../lib/token-core.js';
+import { loadCache } from '../lib/cache-core.js';
 import refreshCmd from '../lib/refresh-cmd.js';
+import { resolveCachePath, resolveTokenPath } from '../lib/paths-core.js';
 
 const { expect } = chai;
 
@@ -70,15 +70,15 @@ describe('refresh-cmd', () => {
     if (fs.existsSync(DEFAULT_PATH)) fs.unlinkSync(DEFAULT_PATH);
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
 
-    cacheBackup = fs.existsSync(CACHE_PATH)
-      ? fs.readFileSync(CACHE_PATH, 'utf-8')
+    cacheBackup = fs.existsSync(resolveCachePath())
+      ? fs.readFileSync(resolveCachePath(), 'utf-8')
       : null;
-    tokenBackup = fs.existsSync(tokenPath)
-      ? fs.readFileSync(tokenPath, 'utf-8')
+    tokenBackup = fs.existsSync(resolveTokenPath())
+      ? fs.readFileSync(resolveTokenPath(), 'utf-8')
       : null;
 
-    if (fs.existsSync(CACHE_PATH)) fs.unlinkSync(CACHE_PATH);
-    if (fs.existsSync(tokenPath)) fs.unlinkSync(tokenPath);
+    if (fs.existsSync(resolveCachePath())) fs.unlinkSync(resolveCachePath());
+    if (fs.existsSync(resolveTokenPath())) fs.unlinkSync(resolveTokenPath());
 
     logs = [];
     errors = [];
@@ -106,15 +106,15 @@ describe('refresh-cmd', () => {
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
 
     if (cacheBackup !== null) {
-      fs.writeFileSync(CACHE_PATH, cacheBackup);
-    } else if (fs.existsSync(CACHE_PATH)) {
-      fs.unlinkSync(CACHE_PATH);
+      fs.writeFileSync(resolveCachePath(), cacheBackup);
+    } else if (fs.existsSync(resolveCachePath())) {
+      fs.unlinkSync(resolveCachePath());
     }
 
     if (tokenBackup !== null) {
-      fs.writeFileSync(tokenPath, tokenBackup);
-    } else if (fs.existsSync(tokenPath)) {
-      fs.unlinkSync(tokenPath);
+      fs.writeFileSync(resolveTokenPath(), tokenBackup);
+    } else if (fs.existsSync(resolveTokenPath())) {
+      fs.unlinkSync(resolveTokenPath());
     }
   });
 
@@ -161,7 +161,7 @@ describe('refresh-cmd', () => {
   });
 
   it('passes the stored token with each request', async () => {
-    fs.writeFileSync(tokenPath, 'refresh-token');
+    fs.writeFileSync(resolveTokenPath(), 'refresh-token');
     writeConfig({ 'my-service': serviceUrl });
     await refreshCmd();
     const params = (requests[0] as unknown as { bodyParams: URLSearchParams })

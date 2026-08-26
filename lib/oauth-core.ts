@@ -1,19 +1,19 @@
 import { execSync } from 'child_process';
 import fs from 'fs';
-import os from 'os';
-import path from 'path';
 import { requestOAuthToken } from './arcgis-core.js';
 import { ArcqError } from './errors.js';
+import {
+  ensureStateDir,
+  resolveOAuthPath,
+  resolveTokenMetaPath,
+} from './paths-core.js';
 import { getToken, setTokenValue } from './token-core.js';
 import type { OAuthTokenError, OAuthTokenResponse } from './types.js';
 
 // OAuth credentials live in their own file, separate from the plain access
-// token in ~/.arcq-token, so the token file's format stays backward compatible.
-export const oauthPath = path.join(os.homedir(), '.arcq-oauth.json');
-
-// The access token's expiry is tracked alongside it so `token show` can report
-// how much life is left without decoding the (opaque) token itself.
-export const tokenMetaPath = path.join(os.homedir(), '.arcq-token-meta.json');
+// token in .arcq-token, so the token file's format stays backward compatible.
+// The access token's expiry is tracked in a third file so `token show` can
+// report how much life is left without decoding the (opaque) token itself.
 
 export interface OAuthConfig {
   portalUrl: string;
@@ -37,7 +37,7 @@ export interface TokenMeta {
 export function loadOAuth(): OAuthConfig | null {
   try {
     const parsed = JSON.parse(
-      fs.readFileSync(oauthPath, 'utf-8')
+      fs.readFileSync(resolveOAuthPath(), 'utf-8')
     ) as OAuthConfig;
     if (
       !parsed ||
@@ -55,6 +55,8 @@ export function loadOAuth(): OAuthConfig | null {
 export function saveOAuth(config: OAuthConfig): void {
   // Same secret-hygiene as setTokenValue: owner-only, and re-tightened in case
   // the file already existed with looser permissions.
+  ensureStateDir();
+  const oauthPath = resolveOAuthPath();
   fs.writeFileSync(oauthPath, JSON.stringify(config, null, 2), { mode: 0o600 });
   fs.chmodSync(oauthPath, 0o600);
 }
@@ -62,7 +64,7 @@ export function saveOAuth(config: OAuthConfig): void {
 export function loadTokenMeta(): TokenMeta | null {
   try {
     const parsed = JSON.parse(
-      fs.readFileSync(tokenMetaPath, 'utf-8')
+      fs.readFileSync(resolveTokenMetaPath(), 'utf-8')
     ) as TokenMeta;
     if (!parsed || typeof parsed.expires !== 'number') return null;
     return parsed;
@@ -72,6 +74,8 @@ export function loadTokenMeta(): TokenMeta | null {
 }
 
 export function saveTokenMeta(meta: TokenMeta): void {
+  ensureStateDir();
+  const tokenMetaPath = resolveTokenMetaPath();
   fs.writeFileSync(tokenMetaPath, JSON.stringify(meta), { mode: 0o600 });
   fs.chmodSync(tokenMetaPath, 0o600);
 }

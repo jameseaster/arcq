@@ -3,9 +3,12 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import http from 'http';
-import { tokenPath } from '../lib/token-core.js';
-import { oauthPath, tokenMetaPath } from '../lib/oauth-core.js';
 import listCmd from '../lib/list-cmd.js';
+import {
+  resolveOAuthPath,
+  resolveTokenMetaPath,
+  resolveTokenPath,
+} from '../lib/paths-core.js';
 
 const { expect } = chai;
 
@@ -65,21 +68,22 @@ describe('list-cmd', () => {
     delete process.env.ARCQ_CONFIG;
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
 
-    tokenBackup = fs.existsSync(tokenPath)
-      ? fs.readFileSync(tokenPath, 'utf-8')
+    tokenBackup = fs.existsSync(resolveTokenPath())
+      ? fs.readFileSync(resolveTokenPath(), 'utf-8')
       : null;
-    if (fs.existsSync(tokenPath)) fs.unlinkSync(tokenPath);
+    if (fs.existsSync(resolveTokenPath())) fs.unlinkSync(resolveTokenPath());
 
     // Isolate the developer's real OAuth setup: with it present, the exit-2
     // path would trigger a real credential-command run and portal request.
-    oauthBackup = fs.existsSync(oauthPath)
-      ? fs.readFileSync(oauthPath, 'utf-8')
+    oauthBackup = fs.existsSync(resolveOAuthPath())
+      ? fs.readFileSync(resolveOAuthPath(), 'utf-8')
       : null;
-    tokenMetaBackup = fs.existsSync(tokenMetaPath)
-      ? fs.readFileSync(tokenMetaPath, 'utf-8')
+    tokenMetaBackup = fs.existsSync(resolveTokenMetaPath())
+      ? fs.readFileSync(resolveTokenMetaPath(), 'utf-8')
       : null;
-    if (fs.existsSync(oauthPath)) fs.unlinkSync(oauthPath);
-    if (fs.existsSync(tokenMetaPath)) fs.unlinkSync(tokenMetaPath);
+    if (fs.existsSync(resolveOAuthPath())) fs.unlinkSync(resolveOAuthPath());
+    if (fs.existsSync(resolveTokenMetaPath()))
+      fs.unlinkSync(resolveTokenMetaPath());
 
     logs = [];
     originalLog = console.log;
@@ -97,21 +101,21 @@ describe('list-cmd', () => {
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
 
     if (tokenBackup !== null) {
-      fs.writeFileSync(tokenPath, tokenBackup);
-    } else if (fs.existsSync(tokenPath)) {
-      fs.unlinkSync(tokenPath);
+      fs.writeFileSync(resolveTokenPath(), tokenBackup);
+    } else if (fs.existsSync(resolveTokenPath())) {
+      fs.unlinkSync(resolveTokenPath());
     }
 
     if (oauthBackup !== null) {
-      fs.writeFileSync(oauthPath, oauthBackup);
-    } else if (fs.existsSync(oauthPath)) {
-      fs.unlinkSync(oauthPath);
+      fs.writeFileSync(resolveOAuthPath(), oauthBackup);
+    } else if (fs.existsSync(resolveOAuthPath())) {
+      fs.unlinkSync(resolveOAuthPath());
     }
 
     if (tokenMetaBackup !== null) {
-      fs.writeFileSync(tokenMetaPath, tokenMetaBackup);
-    } else if (fs.existsSync(tokenMetaPath)) {
-      fs.unlinkSync(tokenMetaPath);
+      fs.writeFileSync(resolveTokenMetaPath(), tokenMetaBackup);
+    } else if (fs.existsSync(resolveTokenMetaPath())) {
+      fs.unlinkSync(resolveTokenMetaPath());
     }
   });
 
@@ -148,7 +152,7 @@ describe('list-cmd', () => {
   });
 
   it('includes the stored token in the request', async () => {
-    fs.writeFileSync(tokenPath, 'test-token-abc');
+    fs.writeFileSync(resolveTokenPath(), 'test-token-abc');
     await listCmd([serviceUrl]);
     const params = (requests[0] as unknown as { bodyParams: URLSearchParams })
       .bodyParams;

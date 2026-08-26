@@ -1,11 +1,8 @@
 import fs from 'fs';
-import os from 'os';
-import path from 'path';
+import { ensureStateDir, resolveConfigPath } from './paths-core.js';
 import type { Config } from './types.js';
 
-export function resolveConfigPath(): string {
-  return process.env.ARCQ_CONFIG || path.join(os.homedir(), '.arcq.json');
-}
+export { resolveConfigPath };
 
 export function loadConfig(): Config {
   const configPath = resolveConfigPath();
@@ -18,5 +15,6 @@ export function loadConfig(): Config {
 }
 
 export function saveConfig(config: Config): void {
+  ensureStateDir();
   fs.writeFileSync(resolveConfigPath(), JSON.stringify(config, null, 2));
 }

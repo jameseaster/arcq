@@ -1,4 +1,4 @@
-import { resolveConfigPath } from './config-core.js';
+import { resolveConfigPath } from './paths-core.js';
 
 export default function helpCmd(): void {
   console.log(`

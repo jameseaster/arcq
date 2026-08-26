@@ -1,6 +1,7 @@
 import * as chai from 'chai';
 import fs from 'fs';
-import { tokenPath, getToken, setTokenValue } from '../lib/token-core.js';
+import { getToken, setTokenValue } from '../lib/token-core.js';
+import { resolveTokenPath } from '../lib/paths-core.js';
 
 const { expect } = chai;
 
@@ -8,17 +9,17 @@ describe('token-core', () => {
   let backup: string | null;
 
   beforeEach(() => {
-    backup = fs.existsSync(tokenPath)
-      ? fs.readFileSync(tokenPath, 'utf-8')
+    backup = fs.existsSync(resolveTokenPath())
+      ? fs.readFileSync(resolveTokenPath(), 'utf-8')
       : null;
-    if (fs.existsSync(tokenPath)) fs.unlinkSync(tokenPath);
+    if (fs.existsSync(resolveTokenPath())) fs.unlinkSync(resolveTokenPath());
   });
 
   afterEach(() => {
     if (backup !== null) {
-      fs.writeFileSync(tokenPath, backup);
-    } else if (fs.existsSync(tokenPath)) {
-      fs.unlinkSync(tokenPath);
+      fs.writeFileSync(resolveTokenPath(), backup);
+    } else if (fs.existsSync(resolveTokenPath())) {
+      fs.unlinkSync(resolveTokenPath());
     }
   });
 
@@ -28,43 +29,49 @@ describe('token-core', () => {
     });
 
     it('returns the token string when the file exists', () => {
-      fs.writeFileSync(tokenPath, 'abc123');
+      fs.writeFileSync(resolveTokenPath(), 'abc123');
       expect(getToken()).to.equal('abc123');
     });
 
     it('trims whitespace from the stored token', () => {
-      fs.writeFileSync(tokenPath, '  my-token\n');
+      fs.writeFileSync(resolveTokenPath(), '  my-token\n');
       expect(getToken()).to.equal('my-token');
     });
   });
 
   describe('setTokenValue', () => {
-    it('writes the token to tokenPath', () => {
+    it('writes the token to resolveTokenPath()', () => {
       setTokenValue('new-token');
-      expect(fs.readFileSync(tokenPath, 'utf-8')).to.equal('new-token');
+      expect(fs.readFileSync(resolveTokenPath(), 'utf-8')).to.equal(
+        'new-token'
+      );
     });
 
     it('trims whitespace before writing', () => {
       setTokenValue('  padded-token  ');
-      expect(fs.readFileSync(tokenPath, 'utf-8')).to.equal('padded-token');
+      expect(fs.readFileSync(resolveTokenPath(), 'utf-8')).to.equal(
+        'padded-token'
+      );
     });
 
     it('overwrites an existing token', () => {
-      fs.writeFileSync(tokenPath, 'old-token');
+      fs.writeFileSync(resolveTokenPath(), 'old-token');
       setTokenValue('new-token');
-      expect(fs.readFileSync(tokenPath, 'utf-8')).to.equal('new-token');
+      expect(fs.readFileSync(resolveTokenPath(), 'utf-8')).to.equal(
+        'new-token'
+      );
     });
 
     it('writes the token file with mode 600', () => {
       setTokenValue('secret');
-      expect(fs.statSync(tokenPath).mode & 0o777).to.equal(0o600);
+      expect(fs.statSync(resolveTokenPath()).mode & 0o777).to.equal(0o600);
     });
 
     it('tightens a pre-existing loosely-permissioned file to 600', () => {
-      fs.writeFileSync(tokenPath, 'old-token', { mode: 0o644 });
-      fs.chmodSync(tokenPath, 0o644);
+      fs.writeFileSync(resolveTokenPath(), 'old-token', { mode: 0o644 });
+      fs.chmodSync(resolveTokenPath(), 0o644);
       setTokenValue('new-token');
-      expect(fs.statSync(tokenPath).mode & 0o777).to.equal(0o600);
+      expect(fs.statSync(resolveTokenPath()).mode & 0o777).to.equal(0o600);
     });
   });
 

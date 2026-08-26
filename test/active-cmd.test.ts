@@ -1,13 +1,10 @@
 import * as chai from 'chai';
 import fs from 'fs';
-import path from 'path';
-import os from 'os';
 import activeCmd from '../lib/active-cmd.js';
 import type { Context } from '../lib/types.js';
+import { resolveContextPath } from '../lib/paths-core.js';
 
 const { expect } = chai;
-
-const CONTEXT_PATH = path.join(os.homedir(), '.arcq-context.json');
 
 describe('active-cmd', () => {
   let contextBackup: string | null;
@@ -15,14 +12,15 @@ describe('active-cmd', () => {
   let originalLog: typeof console.log;
 
   function setContext(ctx: Context) {
-    fs.writeFileSync(CONTEXT_PATH, JSON.stringify(ctx));
+    fs.writeFileSync(resolveContextPath(), JSON.stringify(ctx));
   }
 
   beforeEach(() => {
-    contextBackup = fs.existsSync(CONTEXT_PATH)
-      ? fs.readFileSync(CONTEXT_PATH, 'utf-8')
+    contextBackup = fs.existsSync(resolveContextPath())
+      ? fs.readFileSync(resolveContextPath(), 'utf-8')
       : null;
-    if (fs.existsSync(CONTEXT_PATH)) fs.unlinkSync(CONTEXT_PATH);
+    if (fs.existsSync(resolveContextPath()))
+      fs.unlinkSync(resolveContextPath());
 
     logs = [];
     originalLog = console.log;
@@ -33,9 +31,9 @@ describe('active-cmd', () => {
     console.log = originalLog;
 
     if (contextBackup !== null) {
-      fs.writeFileSync(CONTEXT_PATH, contextBackup);
-    } else if (fs.existsSync(CONTEXT_PATH)) {
-      fs.unlinkSync(CONTEXT_PATH);
+      fs.writeFileSync(resolveContextPath(), contextBackup);
+    } else if (fs.existsSync(resolveContextPath())) {
+      fs.unlinkSync(resolveContextPath());
     }
   });
 
