@@ -71,6 +71,11 @@ describe('fields-cmd', () => {
     process.env.ARCQ_CONFIG = TEMP_CONFIG;
   }
 
+  function writeServices(services: Record<string, string>) {
+    fs.writeFileSync(TEMP_CONFIG, JSON.stringify({ services }));
+    process.env.ARCQ_CONFIG = TEMP_CONFIG;
+  }
+
   before(async () => {
     server = http.createServer((req, res) => {
       let raw = '';
@@ -210,5 +215,26 @@ describe('fields-cmd', () => {
     }
     expect(thrown).to.be.instanceOf(ArcqError);
     expect((thrown as ArcqError).exitCode).to.equal(2);
+  });
+
+  describe('service:id layer argument', () => {
+    it('resolves <service>:<id> against the configured services', async () => {
+      writeServices({ 'my-service': baseUrl });
+      await fieldsCmd(['my-service:0']);
+      expect(requests).to.have.length(1);
+      expect(requests[0]!.url).to.include('/0');
+    });
+
+    it('rejects an unknown service key', async () => {
+      writeServices({ 'my-service': baseUrl });
+      let thrown;
+      try {
+        await fieldsCmd(['nope:0']);
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).to.be.instanceOf(ArcqError);
+      expect((thrown as ArcqError).message).to.include('unknown layer');
+    });
   });
 });

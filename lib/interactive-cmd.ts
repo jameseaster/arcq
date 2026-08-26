@@ -3,7 +3,7 @@ import { loadConfig } from './config-core.js';
 import { saveContext } from './context-core.js';
 import { execSync } from 'child_process';
 import { ArcqError } from './errors.js';
-import { suggestNames } from './layer-resolve.js';
+import { parseServiceId, suggestNames } from './layer-resolve.js';
 import type { CatalogLayer, Context } from './types.js';
 
 type LayerWithService = CatalogLayer & { service: string };
@@ -17,22 +17,20 @@ function resolveNamed(name: string, allLayers: LayerWithService[]): Context {
   const configUrl = config.layers?.[name];
   if (configUrl) return { name, url: configUrl };
 
-  // Split on the LAST ':' so service names containing ':' don't break.
-  const sep = name.lastIndexOf(':');
-  if (sep !== -1) {
-    const service = name.slice(0, sep);
-    const idStr = name.slice(sep + 1);
-    if (/^\d+$/.test(idStr)) {
-      const id = parseInt(idStr, 10);
-      const match = allLayers.find((l) => l.service === service && l.id === id);
-      if (match) {
-        return {
-          service: match.service,
-          layerId: match.id,
-          name: match.name,
-          url: match.url,
-        };
-      }
+  // Same parse as `query` and `fields` use, so one identifier cannot mean
+  // different things depending on which command it is handed to.
+  const parsed = parseServiceId(name);
+  if (parsed) {
+    const match = allLayers.find(
+      (l) => l.service === parsed.service && l.id === parsed.id
+    );
+    if (match) {
+      return {
+        service: match.service,
+        layerId: match.id,
+        name: match.name,
+        url: match.url,
+      };
     }
   }
 
