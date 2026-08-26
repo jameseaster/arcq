@@ -124,10 +124,36 @@ Two more hardening details:
 
 - The auth token is stored at `~/.arcq-token` with file mode `600` (owner read/write only). OAuth refresh credentials (`~/.arcq-oauth.json`) and the token-expiry meta (`~/.arcq-token-meta.json`) are written `600` as well - see [Authentication](#authentication) for the trade-off between a stored refresh token and a `--command` credential helper.
 - Requests are sent as HTTP `POST` with form-encoded bodies, so the token is never placed in a URL query string where it would land in server or proxy access logs.
+- The stored token is sent to whatever host the queried service lives on. If you work with more than one portal, give each its own state directory via `ARCQ_HOME` (see [State directory](#state-directory)) so a token minted for one portal is never sent to another.
+
+## State directory
+
+All six of arcq's state files live in your home directory by default:
+
+| File                      | Purpose                  |
+| ------------------------- | ------------------------ |
+| `~/.arcq.json`            | Service/layer URL config |
+| `~/.arcq-context.json`    | Active layer selection   |
+| `~/.arcq-cache.json`      | Cached layer catalog     |
+| `~/.arcq-token`           | ArcGIS auth token        |
+| `~/.arcq-oauth.json`      | OAuth refresh credential |
+| `~/.arcq-token-meta.json` | Access-token expiry      |
+
+Set `ARCQ_HOME` to keep a complete, independent set somewhere else. It is created on first write with mode `700`:
+
+```bash
+export ARCQ_HOME=~/.arcq-portal-a
+arcq token set
+arcq services add my-service "https://portal-a.example.com/arcgis/rest/services"
+```
+
+A second portal gets a second directory, and neither one's token can reach the other's host.
+
+`ARCQ_CONFIG` still names a single config file and takes precedence over `ARCQ_HOME`, so an existing setup that points it at a shared config keeps working. Note that it isolates _only_ the config - the token and OAuth credential follow `ARCQ_HOME`.
 
 ## Configuration
 
-arcq reads a JSON config file from `~/.arcq.json` by default. Override the path with the `ARCQ_CONFIG` environment variable.
+arcq reads a JSON config file from `~/.arcq.json` by default (or `$ARCQ_HOME/.arcq.json`; see [State directory](#state-directory)). Override the path directly with the `ARCQ_CONFIG` environment variable, which wins over `ARCQ_HOME`.
 
 ```json
 {

@@ -1,4 +1,4 @@
-import { resolveConfigPath } from './paths-core.js';
+import { resolveConfigPath, resolveStateDir } from './paths-core.js';
 
 export default function helpCmd(): void {
   console.log(`
@@ -57,8 +57,15 @@ Examples:
   arcq query --limit 5 --out-fields OBJECTID,STATUS "STATUS = 'ACTIVE'"
   arcq parcels "1=1"
 
+State directory:
+  ${resolveStateDir()} (override with ARCQ_HOME env var)
+
+  Holds .arcq.json, .arcq-context.json, .arcq-cache.json, .arcq-token,
+  .arcq-oauth.json, and .arcq-token-meta.json. Point ARCQ_HOME at a separate
+  directory per portal to keep one portal's token from reaching another.
+
 Config:
-  ${resolveConfigPath()} (override with ARCQ_CONFIG env var)
+  ${resolveConfigPath()} (override with ARCQ_CONFIG env var, which wins over ARCQ_HOME)
 
   {
     "services": { "my-service": "https://example.com/.../FeatureServer" },
