@@ -151,6 +151,56 @@ describe('bin/arcq', function () {
       }
     });
 
+    it('omits a token bound to another host, and says so', async () => {
+      respond({ features: [] });
+      const bound = fs.mkdtempSync(path.join(os.tmpdir(), 'arcq-bound-'));
+      try {
+        fs.writeFileSync(path.join(bound, '.arcq-token'), 'portal-a-token', {
+          mode: 0o600,
+        });
+        fs.writeFileSync(
+          path.join(bound, '.arcq-token-meta.json'),
+          JSON.stringify({
+            expires: Date.now() + 3600_000,
+            host: 'portal-a.example.com',
+          })
+        );
+        const res = await runBin(['-q', baseUrl, '1=1'], { ARCQ_HOME: bound });
+        expect(res.status).to.equal(0);
+        expect(bodies).to.have.length(1);
+        expect(bodies[0]!.has('token')).to.equal(false);
+        expect(res.stderr).to.include('omitting the token');
+        expect(res.stderr).to.include('portal-a.example.com');
+      } finally {
+        fs.rmSync(bound, { recursive: true, force: true });
+      }
+    });
+
+    it('sends the bound token when --allow-cross-host is passed', async () => {
+      respond({ features: [] });
+      const bound = fs.mkdtempSync(path.join(os.tmpdir(), 'arcq-bound-'));
+      try {
+        fs.writeFileSync(path.join(bound, '.arcq-token'), 'portal-a-token', {
+          mode: 0o600,
+        });
+        fs.writeFileSync(
+          path.join(bound, '.arcq-token-meta.json'),
+          JSON.stringify({
+            expires: Date.now() + 3600_000,
+            host: 'portal-a.example.com',
+          })
+        );
+        const res = await runBin(['-q', '--allow-cross-host', baseUrl, '1=1'], {
+          ARCQ_HOME: bound,
+        });
+        expect(res.status).to.equal(0);
+        expect(bodies[0]!.get('token')).to.equal('portal-a-token');
+        expect(res.stderr).to.include('WARNING');
+      } finally {
+        fs.rmSync(bound, { recursive: true, force: true });
+      }
+    });
+
     it('still sends the home-directory token when ARCQ_HOME is unset', async () => {
       respond({ features: [] });
       const res = await runBin(['-q', baseUrl, '1=1'], {

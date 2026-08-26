@@ -7,6 +7,7 @@ import fieldsCmd from '../lib/fields-cmd.js';
 import { ArcqError } from '../lib/errors.js';
 import type { Context } from '../lib/types.js';
 import { resolveContextPath, resolveTokenPath } from '../lib/paths-core.js';
+import { resetBindingNotices } from '../lib/token-binding.js';
 import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
@@ -50,6 +51,8 @@ describe('fields-cmd', () => {
   let originalEnv: string | undefined;
   let logs: string[];
   let originalLog: typeof console.log;
+  let errs: string[];
+  let originalError: typeof console.error;
 
   function respond(data: unknown) {
     handler = (req: http.IncomingMessage, res: http.ServerResponse) => {
@@ -103,10 +106,19 @@ describe('fields-cmd', () => {
     logs = [];
     originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
+
+    // A token with no recorded host draws a one-time stderr hint; capture it
+    // so it stays out of the test report, and reset so each test sees it.
+    resetBindingNotices();
+    errs = [];
+    originalError = console.error;
+    console.error = (...args) => errs.push(args.join(' '));
   });
 
   afterEach(() => {
     console.log = originalLog;
+    console.error = originalError;
+    resetBindingNotices();
 
     if (originalEnv === undefined) {
       delete process.env.ARCQ_CONFIG;
