@@ -13,6 +13,10 @@ const TSX = path.join(ROOT, 'node_modules', '.bin', 'tsx');
 const BIN = path.join(ROOT, 'bin', 'arcq.ts');
 const TEMP_CONFIG = path.join(os.tmpdir(), 'arcq-test-bin-config.json');
 const TEMP_HOME = path.join(os.tmpdir(), 'arcq-test-bin-home');
+// A stand-in for the developer's real home: it holds a token, and no test may
+// let that token reach the server when ARCQ_HOME points somewhere else.
+const DECOY_HOME = path.join(os.tmpdir(), 'arcq-test-bin-decoy-home');
+const DECOY_TOKEN = 'decoy-home-token';
 
 interface BinResult {
   status: number | null;
@@ -30,29 +34,43 @@ describe('bin/arcq', function () {
   let server: http.Server;
   let baseUrl: string;
   let handler: (req: http.IncomingMessage, res: http.ServerResponse) => void;
+  let bodies: URLSearchParams[];
 
   function respond(data: unknown) {
     handler = (req: http.IncomingMessage, res: http.ServerResponse) => {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(data));
+      let raw = '';
+      req.on('data', (chunk) => {
+        raw += chunk;
+      });
+      req.on('end', () => {
+        bodies.push(new URLSearchParams(raw));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(data));
+      });
     };
   }
 
-  function runBin(args: string[]): Promise<BinResult> {
+  function runBin(
+    args: string[],
+    envOverrides: Record<string, string | undefined> = {}
+  ): Promise<BinResult> {
     return new Promise((resolve, reject) => {
       // The child gets an empty temp state directory so the developer's real
       // token and OAuth files can't leak in (a real OAuth setup would turn the
       // token-error test into a live credential-command run and portal
       // request). HOME is overridden too, in case anything else consults it.
-      const child = spawn(TSX, [BIN, ...args], {
-        env: {
-          ...process.env,
-          ARCQ_CONFIG: TEMP_CONFIG,
-          ARCQ_HOME: TEMP_HOME,
-          HOME: TEMP_HOME,
-          USERPROFILE: TEMP_HOME,
-        },
-      });
+      const env: Record<string, string | undefined> = {
+        ...process.env,
+        ARCQ_CONFIG: TEMP_CONFIG,
+        ARCQ_HOME: TEMP_HOME,
+        HOME: TEMP_HOME,
+        USERPROFILE: TEMP_HOME,
+        ...envOverrides,
+      };
+      for (const [key, value] of Object.entries(envOverrides)) {
+        if (value === undefined) delete env[key];
+      }
+      const child = spawn(TSX, [BIN, ...args], { env });
       let stdout = '';
       let stderr = '';
       child.stdout.on('data', (d: Buffer) => (stdout += d.toString()));
@@ -62,9 +80,17 @@ describe('bin/arcq', function () {
     });
   }
 
+  beforeEach(() => {
+    bodies = [];
+  });
+
   before(async () => {
     fs.writeFileSync(TEMP_CONFIG, '{}');
     fs.mkdirSync(TEMP_HOME, { recursive: true });
+    fs.mkdirSync(DECOY_HOME, { recursive: true });
+    fs.writeFileSync(path.join(DECOY_HOME, '.arcq-token'), DECOY_TOKEN, {
+      mode: 0o600,
+    });
     server = http.createServer((req, res) => handler(req, res));
     await new Promise<void>((resolve) => {
       server.listen(0, '127.0.0.1', () => {
@@ -77,6 +103,7 @@ describe('bin/arcq', function () {
   after(async () => {
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
     fs.rmSync(TEMP_HOME, { recursive: true, force: true });
+    fs.rmSync(DECOY_HOME, { recursive: true, force: true });
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 
@@ -101,5 +128,39 @@ describe('bin/arcq', function () {
     const res = await runBin(['--version']);
     expect(res.status).to.equal(0);
     expect(res.stdout.trim()).to.match(/^\d+\.\d+\.\d+$/);
+  });
+
+  // The defect ARCQ_HOME exists to fix: state other than the config stayed
+  // bound to the home directory, so a token minted for one portal was sent to
+  // whatever host the queried service happened to live on.
+  describe('state isolation', () => {
+    it('sends no token when ARCQ_HOME is an empty directory', async () => {
+      respond({ features: [] });
+      const isolated = fs.mkdtempSync(path.join(os.tmpdir(), 'arcq-isolated-'));
+      try {
+        const res = await runBin(['-q', baseUrl, '1=1'], {
+          ARCQ_HOME: isolated,
+          HOME: DECOY_HOME,
+          USERPROFILE: DECOY_HOME,
+        });
+        expect(res.status).to.equal(0);
+        expect(bodies).to.have.length(1);
+        expect(bodies[0]!.has('token')).to.equal(false);
+      } finally {
+        fs.rmSync(isolated, { recursive: true, force: true });
+      }
+    });
+
+    it('still sends the home-directory token when ARCQ_HOME is unset', async () => {
+      respond({ features: [] });
+      const res = await runBin(['-q', baseUrl, '1=1'], {
+        ARCQ_HOME: undefined,
+        HOME: DECOY_HOME,
+        USERPROFILE: DECOY_HOME,
+      });
+      expect(res.status).to.equal(0);
+      expect(bodies).to.have.length(1);
+      expect(bodies[0]!.get('token')).to.equal(DECOY_TOKEN);
+    });
   });
 });
