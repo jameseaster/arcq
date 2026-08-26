@@ -1,5 +1,60 @@
 # Changelog
 
+## [1.2.0] - 2026-08-26
+
+Two credential-safety fixes. Neither is remotely exploitable - both required
+only ordinary use to leak a token to a host that had no business seeing it.
+
+### Fixed
+
+- **A token minted for one portal is no longer sent to unrelated hosts.** arcq
+  attached the stored access token to every request without checking that the
+  token had been issued by the host being queried, so pointing it at a public
+  ArcGIS Online service while an enterprise portal token was configured sent
+  that credential to `services.arcgis.com` - which did not need one, the
+  endpoint being anonymously readable. A token now records the host it was
+  issued for, and arcq omits it on requests anywhere else, continuing
+  anonymously rather than failing. Enforcement lives in the single HTTP choke
+  point every request already passes through.
+- **`ARCQ_CONFIG` isolated only the config file, not the rest of arcq's
+  state.** The other five state files - context, cache, token, OAuth
+  credential, and token metadata - were bound to the home directory at module
+  load, so no environment variable could move them. Working with two portals
+  side by side was impossible, and the token file was shared between them.
+- **`arcq query` and `arcq fields` rejected `service:id`**, which `arcq use`
+  has always accepted and `arcq --help` documents. The same identifier now
+  resolves in all three, without needing a prior `arcq refresh`. An unknown
+  name also suggests across service keys, not just layer keys.
+
+### Added
+
+- `ARCQ_HOME` - one directory holding a complete, independent set of arcq
+  state, so two portals can be used side by side without one's token reaching
+  the other. Created on first write with mode `700`. `ARCQ_CONFIG` keeps its
+  exact meaning and still takes precedence for the config file alone.
+- `arcq token set --host <host>` records the host a manually pasted token
+  belongs to. Omitted, the host is inferred when every service in the config
+  shares one. `arcq token connect` and `arcq token refresh` record it from the
+  portal automatically.
+- `arcq token show` reports the bound host.
+- `--allow-cross-host`, `ARCQ_ALLOW_CROSS_HOST=1`, and `"allowCrossHost": true`
+  send the token to hosts it was not issued for, for deployments that
+  legitimately share one. Same three-tier precedence as `--insecure`, and each
+  prints a stderr warning so the override is never silent.
+
+### Changed
+
+- The unknown-layer error now names `<service>:<id>` as well as the
+  `arcq layers --names` hint, and `arcq --help` gains a `Layer arguments:`
+  section listing the three accepted forms in resolution order.
+
+### Upgrading
+
+Nothing breaks. With neither `ARCQ_HOME` nor `ARCQ_CONFIG` set, every state
+path is byte-identical to 1.1.1. A token stored by an older arcq has no
+recorded host and keeps working exactly as before, with a one-time stderr
+hint, until you re-run `arcq token connect` or `arcq token set --host`.
+
 ## [1.1.1] - 2026-08-13
 
 ### Fixed
