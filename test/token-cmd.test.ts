@@ -3,34 +3,20 @@ import fs from 'fs';
 import { setTokenValue } from '../lib/token-core.js';
 import { saveOAuth, saveTokenMeta } from '../lib/oauth-core.js';
 import tokenCmd from '../lib/token-cmd.js';
-import {
-  resolveOAuthPath,
-  resolveTokenMetaPath,
-  resolveTokenPath,
-} from '../lib/paths-core.js';
+import { resolveTokenPath } from '../lib/paths-core.js';
+import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
 
 describe('token-cmd', () => {
-  let backups: Record<string, string | null>;
+  useTempStateDir();
+
   let logs: string[];
   let errs: string[];
   let originalLog: typeof console.log;
   let originalError: typeof console.error;
 
-  const paths = [
-    resolveTokenPath(),
-    resolveOAuthPath(),
-    resolveTokenMetaPath(),
-  ];
-
   beforeEach(() => {
-    backups = {};
-    for (const p of paths) {
-      backups[p] = fs.existsSync(p) ? fs.readFileSync(p, 'utf-8') : null;
-      if (fs.existsSync(p)) fs.unlinkSync(p);
-    }
-
     logs = [];
     errs = [];
     originalLog = console.log;
@@ -42,12 +28,6 @@ describe('token-cmd', () => {
   afterEach(() => {
     console.log = originalLog;
     console.error = originalError;
-
-    for (const p of paths) {
-      const backup = backups[p];
-      if (backup != null) fs.writeFileSync(p, backup);
-      else if (fs.existsSync(p)) fs.unlinkSync(p);
-    }
   });
 
   describe('show', () => {

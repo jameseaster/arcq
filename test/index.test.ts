@@ -5,13 +5,15 @@ import os from 'os';
 import { run, resolveInsecure } from '../index.js';
 import { getHttpsAgent } from '../lib/tls-core.js';
 import { ArcqError } from '../lib/errors.js';
-import { resolveContextPath } from '../lib/paths-core.js';
+import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
 
 const TEMP_CONFIG = path.join(os.tmpdir(), 'arcq-index-test-config.json');
 
 describe('index', () => {
+  useTempStateDir();
+
   let logs: string[];
   let errors: string[];
   let originalLog: typeof console.log;
@@ -73,24 +75,6 @@ describe('index', () => {
   });
 
   describe('flag-first query shorthand', () => {
-    let contextBackup: string | null;
-
-    beforeEach(() => {
-      contextBackup = fs.existsSync(resolveContextPath())
-        ? fs.readFileSync(resolveContextPath(), 'utf-8')
-        : null;
-      if (fs.existsSync(resolveContextPath()))
-        fs.unlinkSync(resolveContextPath());
-    });
-
-    afterEach(() => {
-      if (contextBackup !== null) {
-        fs.writeFileSync(resolveContextPath(), contextBackup);
-      } else if (fs.existsSync(resolveContextPath())) {
-        fs.unlinkSync(resolveContextPath());
-      }
-    });
-
     it('still routes arcq -q "1=1" to query', async () => {
       // With no active context the query itself rejects, which proves the
       // -q allowlist routed to query instead of the unknown-flag guard.
@@ -113,8 +97,8 @@ describe('index', () => {
     beforeEach(() => {
       envConfig = process.env.ARCQ_CONFIG;
       envInsecure = process.env.ARCQ_INSECURE;
-      // Point config resolution at an empty temp file so the real
-      // ~/.arcq.json cannot flip these cases on or off.
+      // Point config resolution at an empty temp file so a stray config
+      // cannot flip these cases on or off.
       process.env.ARCQ_CONFIG = TEMP_CONFIG;
       fs.writeFileSync(TEMP_CONFIG, '{}');
       delete process.env.ARCQ_INSECURE;

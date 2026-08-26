@@ -8,27 +8,21 @@ import { saveOAuth } from '../lib/oauth-core.js';
 import queryCmd from '../lib/query-cmd.js';
 import { ArcqError } from '../lib/errors.js';
 import type { Context } from '../lib/types.js';
-import {
-  resolveContextPath,
-  resolveOAuthPath,
-  resolveTokenMetaPath,
-  resolveTokenPath,
-} from '../lib/paths-core.js';
+import { resolveContextPath, resolveTokenPath } from '../lib/paths-core.js';
+import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
 
 const TEMP_CONFIG = path.join(os.tmpdir(), 'arcq-test-config.json');
 
 describe('query-cmd', () => {
+  useTempStateDir();
+
   let server: http.Server;
   let baseUrl: string;
   let handler: (req: http.IncomingMessage, res: http.ServerResponse) => void;
   let requests: http.IncomingMessage[];
   let originalEnv: string | undefined;
-  let contextBackup: string | null;
-  let tokenBackup: string | null;
-  let oauthBackup: string | null;
-  let metaBackup: string | null;
   let logs: string[];
   let originalLog: typeof console.log;
   let errs: string[];
@@ -91,26 +85,6 @@ describe('query-cmd', () => {
     delete process.env.ARCQ_CONFIG;
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
 
-    contextBackup = fs.existsSync(resolveContextPath())
-      ? fs.readFileSync(resolveContextPath(), 'utf-8')
-      : null;
-    tokenBackup = fs.existsSync(resolveTokenPath())
-      ? fs.readFileSync(resolveTokenPath(), 'utf-8')
-      : null;
-    oauthBackup = fs.existsSync(resolveOAuthPath())
-      ? fs.readFileSync(resolveOAuthPath(), 'utf-8')
-      : null;
-    metaBackup = fs.existsSync(resolveTokenMetaPath())
-      ? fs.readFileSync(resolveTokenMetaPath(), 'utf-8')
-      : null;
-
-    if (fs.existsSync(resolveContextPath()))
-      fs.unlinkSync(resolveContextPath());
-    if (fs.existsSync(resolveTokenPath())) fs.unlinkSync(resolveTokenPath());
-    if (fs.existsSync(resolveOAuthPath())) fs.unlinkSync(resolveOAuthPath());
-    if (fs.existsSync(resolveTokenMetaPath()))
-      fs.unlinkSync(resolveTokenMetaPath());
-
     logs = [];
     originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
@@ -131,30 +105,6 @@ describe('query-cmd', () => {
       process.env.ARCQ_CONFIG = originalEnv;
     }
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
-
-    if (contextBackup !== null) {
-      fs.writeFileSync(resolveContextPath(), contextBackup);
-    } else if (fs.existsSync(resolveContextPath())) {
-      fs.unlinkSync(resolveContextPath());
-    }
-
-    if (tokenBackup !== null) {
-      fs.writeFileSync(resolveTokenPath(), tokenBackup);
-    } else if (fs.existsSync(resolveTokenPath())) {
-      fs.unlinkSync(resolveTokenPath());
-    }
-
-    if (oauthBackup !== null) {
-      fs.writeFileSync(resolveOAuthPath(), oauthBackup);
-    } else if (fs.existsSync(resolveOAuthPath())) {
-      fs.unlinkSync(resolveOAuthPath());
-    }
-
-    if (metaBackup !== null) {
-      fs.writeFileSync(resolveTokenMetaPath(), metaBackup);
-    } else if (fs.existsSync(resolveTokenMetaPath())) {
-      fs.unlinkSync(resolveTokenMetaPath());
-    }
   });
 
   describe('single arg — where clause against active layer', () => {

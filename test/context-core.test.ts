@@ -2,27 +2,12 @@ import * as chai from 'chai';
 import fs from 'fs';
 import { loadContext, saveContext } from '../lib/context-core.js';
 import { resolveContextPath } from '../lib/paths-core.js';
+import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
 
 describe('context-core', () => {
-  let backup: string | null;
-
-  beforeEach(() => {
-    backup = fs.existsSync(resolveContextPath())
-      ? fs.readFileSync(resolveContextPath(), 'utf-8')
-      : null;
-    if (fs.existsSync(resolveContextPath()))
-      fs.unlinkSync(resolveContextPath());
-  });
-
-  afterEach(() => {
-    if (backup !== null) {
-      fs.writeFileSync(resolveContextPath(), backup);
-    } else if (fs.existsSync(resolveContextPath())) {
-      fs.unlinkSync(resolveContextPath());
-    }
-  });
+  useTempStateDir();
 
   describe('loadContext', () => {
     it('returns null when no context file exists', () => {
@@ -42,7 +27,7 @@ describe('context-core', () => {
   });
 
   describe('saveContext', () => {
-    it('writes the context as JSON to resolveContextPath()', () => {
+    it('writes the context as JSON to the resolved context path', () => {
       const ctx = {
         service: 'svc',
         layerId: 1,

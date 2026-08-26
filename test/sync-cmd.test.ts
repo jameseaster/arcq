@@ -6,10 +6,10 @@ import http from 'http';
 import syncCmd from '../lib/sync-cmd.js';
 import type { Config } from '../lib/types.js';
 import { resolveTokenPath } from '../lib/paths-core.js';
+import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
 
-const DEFAULT_PATH = path.join(os.homedir(), '.arcq.json');
 const TEMP_CONFIG = path.join(os.tmpdir(), 'arcq-test-sync-config.json');
 
 const CATALOG = {
@@ -21,12 +21,12 @@ const CATALOG = {
 };
 
 describe('sync-cmd', () => {
+  useTempStateDir();
+
   let server: http.Server;
   let serviceUrl: string;
   let requests: http.IncomingMessage[];
   let originalEnv: string | undefined;
-  let defaultBackup: string | null;
-  let tokenBackup: string | null;
   let logs: string[];
   let errors: string[];
   let originalLog: typeof console.log;
@@ -65,17 +65,7 @@ describe('sync-cmd', () => {
 
     originalEnv = process.env.ARCQ_CONFIG;
     process.env.ARCQ_CONFIG = TEMP_CONFIG;
-
-    defaultBackup = fs.existsSync(DEFAULT_PATH)
-      ? fs.readFileSync(DEFAULT_PATH, 'utf-8')
-      : null;
-    if (fs.existsSync(DEFAULT_PATH)) fs.unlinkSync(DEFAULT_PATH);
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
-
-    tokenBackup = fs.existsSync(resolveTokenPath())
-      ? fs.readFileSync(resolveTokenPath(), 'utf-8')
-      : null;
-    if (fs.existsSync(resolveTokenPath())) fs.unlinkSync(resolveTokenPath());
 
     logs = [];
     errors = [];
@@ -95,19 +85,7 @@ describe('sync-cmd', () => {
       process.env.ARCQ_CONFIG = originalEnv;
     }
 
-    if (defaultBackup !== null) {
-      fs.writeFileSync(DEFAULT_PATH, defaultBackup);
-    } else if (fs.existsSync(DEFAULT_PATH)) {
-      fs.unlinkSync(DEFAULT_PATH);
-    }
-
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
-
-    if (tokenBackup !== null) {
-      fs.writeFileSync(resolveTokenPath(), tokenBackup);
-    } else if (fs.existsSync(resolveTokenPath())) {
-      fs.unlinkSync(resolveTokenPath());
-    }
   });
 
   function writeConfig(config: Config) {

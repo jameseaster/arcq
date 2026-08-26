@@ -5,11 +5,11 @@ import os from 'os';
 import http from 'http';
 import { loadCache } from '../lib/cache-core.js';
 import refreshCmd from '../lib/refresh-cmd.js';
-import { resolveCachePath, resolveTokenPath } from '../lib/paths-core.js';
+import { resolveTokenPath } from '../lib/paths-core.js';
+import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
 
-const DEFAULT_PATH = path.join(os.homedir(), '.arcq.json');
 const TEMP_CONFIG = path.join(os.tmpdir(), 'arcq-test-config.json');
 
 const CATALOG = {
@@ -18,13 +18,12 @@ const CATALOG = {
 };
 
 describe('refresh-cmd', () => {
+  useTempStateDir();
+
   let server: http.Server;
   let serviceUrl: string;
   let requests: http.IncomingMessage[];
   let originalEnv: string | undefined;
-  let defaultBackup: string | null;
-  let cacheBackup: string | null;
-  let tokenBackup: string | null;
   let logs: string[];
   let errors: string[];
   let originalLog: typeof console.log;
@@ -63,22 +62,7 @@ describe('refresh-cmd', () => {
 
     originalEnv = process.env.ARCQ_CONFIG;
     delete process.env.ARCQ_CONFIG;
-
-    defaultBackup = fs.existsSync(DEFAULT_PATH)
-      ? fs.readFileSync(DEFAULT_PATH, 'utf-8')
-      : null;
-    if (fs.existsSync(DEFAULT_PATH)) fs.unlinkSync(DEFAULT_PATH);
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
-
-    cacheBackup = fs.existsSync(resolveCachePath())
-      ? fs.readFileSync(resolveCachePath(), 'utf-8')
-      : null;
-    tokenBackup = fs.existsSync(resolveTokenPath())
-      ? fs.readFileSync(resolveTokenPath(), 'utf-8')
-      : null;
-
-    if (fs.existsSync(resolveCachePath())) fs.unlinkSync(resolveCachePath());
-    if (fs.existsSync(resolveTokenPath())) fs.unlinkSync(resolveTokenPath());
 
     logs = [];
     errors = [];
@@ -98,24 +82,7 @@ describe('refresh-cmd', () => {
       process.env.ARCQ_CONFIG = originalEnv;
     }
 
-    if (defaultBackup !== null) {
-      fs.writeFileSync(DEFAULT_PATH, defaultBackup);
-    } else if (fs.existsSync(DEFAULT_PATH)) {
-      fs.unlinkSync(DEFAULT_PATH);
-    }
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
-
-    if (cacheBackup !== null) {
-      fs.writeFileSync(resolveCachePath(), cacheBackup);
-    } else if (fs.existsSync(resolveCachePath())) {
-      fs.unlinkSync(resolveCachePath());
-    }
-
-    if (tokenBackup !== null) {
-      fs.writeFileSync(resolveTokenPath(), tokenBackup);
-    } else if (fs.existsSync(resolveTokenPath())) {
-      fs.unlinkSync(resolveTokenPath());
-    }
   });
 
   function writeConfig(services: Record<string, string>) {

@@ -6,12 +6,8 @@ import http from 'http';
 import fieldsCmd from '../lib/fields-cmd.js';
 import { ArcqError } from '../lib/errors.js';
 import type { Context } from '../lib/types.js';
-import {
-  resolveContextPath,
-  resolveOAuthPath,
-  resolveTokenMetaPath,
-  resolveTokenPath,
-} from '../lib/paths-core.js';
+import { resolveContextPath, resolveTokenPath } from '../lib/paths-core.js';
+import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
 
@@ -45,15 +41,13 @@ const EXPECTED_FIELDS = [
 ];
 
 describe('fields-cmd', () => {
+  useTempStateDir();
+
   let server: http.Server;
   let baseUrl: string;
   let handler: (req: http.IncomingMessage, res: http.ServerResponse) => void;
   let requests: http.IncomingMessage[];
   let originalEnv: string | undefined;
-  let contextBackup: string | null;
-  let tokenBackup: string | null;
-  let oauthBackup: string | null;
-  let tokenMetaBackup: string | null;
   let logs: string[];
   let originalLog: typeof console.log;
 
@@ -106,28 +100,6 @@ describe('fields-cmd', () => {
     delete process.env.ARCQ_CONFIG;
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
 
-    contextBackup = fs.existsSync(resolveContextPath())
-      ? fs.readFileSync(resolveContextPath(), 'utf-8')
-      : null;
-    tokenBackup = fs.existsSync(resolveTokenPath())
-      ? fs.readFileSync(resolveTokenPath(), 'utf-8')
-      : null;
-    // Isolate the developer's real OAuth setup: with it present, the exit-2
-    // path would trigger a real credential-command run and portal request.
-    oauthBackup = fs.existsSync(resolveOAuthPath())
-      ? fs.readFileSync(resolveOAuthPath(), 'utf-8')
-      : null;
-    tokenMetaBackup = fs.existsSync(resolveTokenMetaPath())
-      ? fs.readFileSync(resolveTokenMetaPath(), 'utf-8')
-      : null;
-
-    if (fs.existsSync(resolveContextPath()))
-      fs.unlinkSync(resolveContextPath());
-    if (fs.existsSync(resolveTokenPath())) fs.unlinkSync(resolveTokenPath());
-    if (fs.existsSync(resolveOAuthPath())) fs.unlinkSync(resolveOAuthPath());
-    if (fs.existsSync(resolveTokenMetaPath()))
-      fs.unlinkSync(resolveTokenMetaPath());
-
     logs = [];
     originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
@@ -142,30 +114,6 @@ describe('fields-cmd', () => {
       process.env.ARCQ_CONFIG = originalEnv;
     }
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
-
-    if (contextBackup !== null) {
-      fs.writeFileSync(resolveContextPath(), contextBackup);
-    } else if (fs.existsSync(resolveContextPath())) {
-      fs.unlinkSync(resolveContextPath());
-    }
-
-    if (tokenBackup !== null) {
-      fs.writeFileSync(resolveTokenPath(), tokenBackup);
-    } else if (fs.existsSync(resolveTokenPath())) {
-      fs.unlinkSync(resolveTokenPath());
-    }
-
-    if (oauthBackup !== null) {
-      fs.writeFileSync(resolveOAuthPath(), oauthBackup);
-    } else if (fs.existsSync(resolveOAuthPath())) {
-      fs.unlinkSync(resolveOAuthPath());
-    }
-
-    if (tokenMetaBackup !== null) {
-      fs.writeFileSync(resolveTokenMetaPath(), tokenMetaBackup);
-    } else if (fs.existsSync(resolveTokenMetaPath())) {
-      fs.unlinkSync(resolveTokenMetaPath());
-    }
   });
 
   it('resolves the active context when called with no args', async () => {

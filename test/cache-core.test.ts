@@ -3,26 +3,12 @@ import fs from 'fs';
 import { loadCache, saveCache } from '../lib/cache-core.js';
 import type { Cache } from '../lib/types.js';
 import { resolveCachePath } from '../lib/paths-core.js';
+import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
 
 describe('cache-core', () => {
-  let backup: string | null;
-
-  beforeEach(() => {
-    backup = fs.existsSync(resolveCachePath())
-      ? fs.readFileSync(resolveCachePath(), 'utf-8')
-      : null;
-    if (fs.existsSync(resolveCachePath())) fs.unlinkSync(resolveCachePath());
-  });
-
-  afterEach(() => {
-    if (backup !== null) {
-      fs.writeFileSync(resolveCachePath(), backup);
-    } else if (fs.existsSync(resolveCachePath())) {
-      fs.unlinkSync(resolveCachePath());
-    }
-  });
+  useTempStateDir();
 
   describe('loadCache', () => {
     it('returns {} when the file does not exist', () => {
@@ -37,7 +23,7 @@ describe('cache-core', () => {
   });
 
   describe('saveCache', () => {
-    it('writes the cache as JSON to resolveCachePath()', () => {
+    it('writes the cache as JSON to the resolved cache path', () => {
       const data = { 'my-service': [{ id: 0, name: 'Parcels' }] };
       saveCache(data as unknown as Cache);
       expect(

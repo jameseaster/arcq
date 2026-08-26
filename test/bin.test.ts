@@ -5,7 +5,6 @@ import http from 'http';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { resolveTokenPath } from '../lib/paths-core.js';
 
 const { expect } = chai;
 
@@ -31,7 +30,6 @@ describe('bin/arcq', function () {
   let server: http.Server;
   let baseUrl: string;
   let handler: (req: http.IncomingMessage, res: http.ServerResponse) => void;
-  let tokenBackup: string | null;
 
   function respond(data: unknown) {
     handler = (req: http.IncomingMessage, res: http.ServerResponse) => {
@@ -42,13 +40,15 @@ describe('bin/arcq', function () {
 
   function runBin(args: string[]): Promise<BinResult> {
     return new Promise((resolve, reject) => {
-      // The child gets an empty temp HOME so the developer's real token and
-      // OAuth files can't leak in (a real OAuth setup would turn the token-
-      // error test into a live credential-command run and portal request).
+      // The child gets an empty temp state directory so the developer's real
+      // token and OAuth files can't leak in (a real OAuth setup would turn the
+      // token-error test into a live credential-command run and portal
+      // request). HOME is overridden too, in case anything else consults it.
       const child = spawn(TSX, [BIN, ...args], {
         env: {
           ...process.env,
           ARCQ_CONFIG: TEMP_CONFIG,
+          ARCQ_HOME: TEMP_HOME,
           HOME: TEMP_HOME,
           USERPROFILE: TEMP_HOME,
         },
@@ -78,21 +78,6 @@ describe('bin/arcq', function () {
     if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
     fs.rmSync(TEMP_HOME, { recursive: true, force: true });
     await new Promise<void>((resolve) => server.close(() => resolve()));
-  });
-
-  beforeEach(() => {
-    tokenBackup = fs.existsSync(resolveTokenPath())
-      ? fs.readFileSync(resolveTokenPath(), 'utf-8')
-      : null;
-    if (fs.existsSync(resolveTokenPath())) fs.unlinkSync(resolveTokenPath());
-  });
-
-  afterEach(() => {
-    if (tokenBackup !== null) {
-      fs.writeFileSync(resolveTokenPath(), tokenBackup);
-    } else if (fs.existsSync(resolveTokenPath())) {
-      fs.unlinkSync(resolveTokenPath());
-    }
   });
 
   it('exits 1 and prints error: <message> on an ArcGIS response error', async () => {
