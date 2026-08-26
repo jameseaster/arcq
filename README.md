@@ -199,7 +199,7 @@ arcq reads a JSON config file from `~/.arcq.json` by default (or `$ARCQ_HOME/.ar
 }
 ```
 
-- **`services`** - named shortcuts used by `arcq list` and `arcq refresh`
+- **`services`** - named shortcuts used by `arcq list` and `arcq refresh`, and by the `<service>:<id>` layer form
 - **`layers`** - named shortcuts used by `arcq query <layer>`
 - **`insecure`** - optional; set to `true` to disable TLS verification (see [Security](#security))
 - **`allowCrossHost`** - optional; set to `true` to send the token to hosts it was not issued for (see [Token host binding](#token-host-binding))
@@ -324,7 +324,7 @@ arcq active
 
 ### `arcq fields [layer]`
 
-Prints a layer's field metadata as a JSON array of `{name, type, alias, length}`. Defaults to the active layer; accepts a config layer name or raw URL.
+Prints a layer's field metadata as a JSON array of `{name, type, alias, length}`. Defaults to the active layer; accepts a config layer name, `<service>:<id>`, or a raw URL.
 
 ```bash
 arcq fields
@@ -364,7 +364,7 @@ Output is a JSON array of attribute objects:
 ]
 ```
 
-A layer argument must be a config layer name or contain `://` to be treated as a raw URL - an unknown name exits 1 with closest-match suggestions instead of being sent as a URL. ArcGIS string literals use **single quotes** (double-quote the shell argument): `"STATUS = 'ACTIVE'"` works, `"STATUS = \"ACTIVE\""` is an ArcGIS syntax error and exits 1.
+A layer argument is resolved in three steps: a key from `layers` in the config, then `<service>:<id>` against `services`, then a raw URL (anything containing `://`). `query`, `fields`, and `use` all accept the same three forms. An unknown name exits 1 with closest-match suggestions instead of being sent as a URL. ArcGIS string literals use **single quotes** (double-quote the shell argument): `"STATUS = 'ACTIVE'"` works, `"STATUS = \"ACTIVE\""` is an ArcGIS syntax error and exits 1.
 
 #### Query flags
 

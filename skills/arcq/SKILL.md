@@ -31,7 +31,10 @@ arcq refresh && arcq sync    # index the catalog, generate layer shortcuts
 arcq query <layer> "<where>" --out-fields a,b,c --limit 20 --quiet
 ```
 
-- `<layer>` is a config shortcut (see `arcq layers --names`) or a raw URL.
+- `<layer>` is a config shortcut (see `arcq layers --names`), `<service>:<id>`
+  against a configured service (see `arcq services`), or a raw URL. `query`,
+  `fields`, and `use` all accept the same three forms - no `arcq refresh` is
+  needed for the `<service>:<id>` form.
 - **Quoting rule:** the `where` clause is ArcGIS SQL, and string literals
   need SINGLE quotes inside the double-quoted shell argument:
   `arcq query parcels "STATUS = 'ACTIVE'"`. Double-quoted literals are an
