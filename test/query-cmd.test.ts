@@ -51,6 +51,11 @@ describe('query-cmd', () => {
     process.env.ARCQ_CONFIG = TEMP_CONFIG;
   }
 
+  function writeServices(services: Record<string, string>) {
+    fs.writeFileSync(TEMP_CONFIG, JSON.stringify({ services }));
+    process.env.ARCQ_CONFIG = TEMP_CONFIG;
+  }
+
   before(async () => {
     server = http.createServer(
       (req: http.IncomingMessage, res: http.ServerResponse) => {
@@ -613,6 +618,42 @@ describe('query-cmd', () => {
       expect(thrown).to.be.instanceOf(ArcqError);
       expect((thrown as ArcqError).exitCode).to.equal(2);
       expect(queryRequests()).to.have.length(2);
+    });
+  });
+
+  // `arcq use` has always taken service:id; query rejecting it meant the same
+  // identifier worked in one command and failed in the next.
+  describe('service:id layer argument', () => {
+    it('resolves <service>:<id> against the configured services', async () => {
+      writeServices({ 'my-service': baseUrl });
+      respond({ features: [{ attributes: { OBJECTID: 1 } }] });
+      await queryCmd(['my-service:0', '1=1']);
+      expect(requests[0]!.url).to.include('/0/query');
+    });
+
+    it('reports the service and layer in the summary', async () => {
+      writeServices({ 'my-service': baseUrl });
+      respond({ features: [] });
+      await queryCmd(['my-service:0', '1=1']);
+      expect(errs.join(' ')).to.include("service 'my-service' layer 0");
+    });
+
+    it('rejects an unknown service key', async () => {
+      writeServices({ 'my-service': baseUrl });
+      let thrown;
+      try {
+        await queryCmd(['nope:0', '1=1']);
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).to.be.instanceOf(ArcqError);
+      expect((thrown as ArcqError).message).to.include('unknown layer');
+    });
+
+    it('still treats a raw URL as a raw URL', async () => {
+      respond({ features: [] });
+      await queryCmd([`${baseUrl}/0`, '1=1']);
+      expect(requests[0]!.url).to.include('/0/query');
     });
   });
 });
