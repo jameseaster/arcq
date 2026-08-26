@@ -3,6 +3,7 @@ import fs from 'fs';
 import { requestOAuthToken } from './arcgis-core.js';
 import { ArcqError } from './errors.js';
 import { ensureStateDir, resolveOAuthPath } from './paths-core.js';
+import { hostOf } from './token-binding.js';
 import { getToken, saveTokenMeta, setTokenValue } from './token-core.js';
 import type { OAuthTokenError, OAuthTokenResponse } from './types.js';
 
@@ -196,7 +197,10 @@ export async function performRefresh(
 
   const expires = Date.now() + (res.expires_in ?? 0) * 1000;
   setTokenValue(res.access_token);
-  saveTokenMeta({ expires });
+  // The portal that minted the token is the authority it is valid for, so
+  // record it rather than carrying a stale host forward from the old meta.
+  const host = hostOf(config.portalUrl);
+  saveTokenMeta(host ? { expires, host } : { expires });
 
   // Persist a rotated refresh token - but never when a command owns the secret,
   // so arcq keeps writing only the short-lived access token to disk.
