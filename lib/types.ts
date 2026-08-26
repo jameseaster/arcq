@@ -6,6 +6,9 @@ export interface Config {
   // Opt in to relaxed TLS for arcq's own requests (trusted self-signed
   // servers). Non-boolean values are ignored (treated as false).
   insecure?: boolean;
+  // Opt in to sending the access token to hosts other than the one it was
+  // issued for. Non-boolean values are ignored (treated as false).
+  allowCrossHost?: boolean;
 }
 
 export interface Context {
