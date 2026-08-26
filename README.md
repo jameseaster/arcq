@@ -124,7 +124,40 @@ Two more hardening details:
 
 - The auth token is stored at `~/.arcq-token` with file mode `600` (owner read/write only). OAuth refresh credentials (`~/.arcq-oauth.json`) and the token-expiry meta (`~/.arcq-token-meta.json`) are written `600` as well - see [Authentication](#authentication) for the trade-off between a stored refresh token and a `--command` credential helper.
 - Requests are sent as HTTP `POST` with form-encoded bodies, so the token is never placed in a URL query string where it would land in server or proxy access logs.
-- The stored token is sent to whatever host the queried service lives on. If you work with more than one portal, give each its own state directory via `ARCQ_HOME` (see [State directory](#state-directory)) so a token minted for one portal is never sent to another.
+- The stored token is bound to the host it was issued for and is not sent anywhere else (see [Token host binding](#token-host-binding)).
+
+## Token host binding
+
+arcq records which host an access token was issued for, and refuses to send it to any other one. Without that record, pointing arcq at a public ArcGIS Online service while a token for an internal portal is configured sends that credential to `services.arcgis.com` - ordinary use, no attacker required.
+
+The host is recorded automatically where arcq can know it:
+
+| How the token was stored       | Where the host comes from                                   |
+| ------------------------------ | ----------------------------------------------------------- |
+| `arcq token connect`           | the portal you connected to                                 |
+| `arcq token refresh`           | the portal that minted the token                            |
+| `arcq token set --host <host>` | the flag                                                    |
+| `arcq token set` (no flag)     | inferred, when every service in your config shares one host |
+
+On a request to any other host, arcq **omits the token and continues anonymously**, printing one line to stderr:
+
+```
+[arcq] omitting the token: it was issued for portal.example.com, not services.arcgis.com. Re-run with --allow-cross-host to send it anyway.
+```
+
+Failing open to an anonymous request rather than erroring is deliberate: many ArcGIS services are readable without a token, so the call usually just succeeds. Ones that genuinely need auth fail with the server's own message.
+
+`arcq token show` reports the binding. A token stored by an older arcq has no recorded host; it keeps working exactly as before, with a one-time stderr hint, until you re-run `token connect` or `token set --host`.
+
+Some deployments legitimately share one token across hosts. To opt out, in order of precedence:
+
+1. the `--allow-cross-host` flag on any command
+2. the `ARCQ_ALLOW_CROSS_HOST=1` environment variable
+3. `"allowCrossHost": true` at the top level of your config
+
+Each still prints a stderr warning when it sends a token cross-host, so the override is never silent.
+
+Comparison is on hostname, ignoring the port, because ArcGIS deployments routinely front portal and server on different ports of the same machine.
 
 ## State directory
 
@@ -169,6 +202,7 @@ arcq reads a JSON config file from `~/.arcq.json` by default (or `$ARCQ_HOME/.ar
 - **`services`** - named shortcuts used by `arcq list` and `arcq refresh`
 - **`layers`** - named shortcuts used by `arcq query <layer>`
 - **`insecure`** - optional; set to `true` to disable TLS verification (see [Security](#security))
+- **`allowCrossHost`** - optional; set to `true` to send the token to hosts it was not issued for (see [Token host binding](#token-host-binding))
 
 `services` and `layers` both accept a raw URL in place of a name.
 
