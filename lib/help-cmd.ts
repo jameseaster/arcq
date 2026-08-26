@@ -11,9 +11,10 @@ Usage:
   arcq use <name>                    Select the active layer by config key, service:id, or cached layer name (first match wins)
   arcq active                        Print the active layer and its URL
   arcq query <where>                 Query the active layer
-  arcq query <layer> <where>         Query a named layer or raw URL
+  arcq query <layer> <where>         Query a layer by config key, service:id, or raw URL
   arcq <layer> <where>               Shorthand for query
-  arcq fields [layer]                Print layer field metadata as JSON (default: the active layer)
+  arcq fields [layer]                Print layer field metadata as JSON (config key, service:id,
+                                     or raw URL; default: the active layer)
   arcq list <service>                List layers/tables in a service or URL
   arcq layers                        List named layers in the config (--names for keys only)
   arcq services add <name> <url>     Add a named service to the config
@@ -58,6 +59,12 @@ Exit codes:
   0  success - an empty [] result is a real answer, not an error
   1  error (bad where clause, unknown layer, no active layer, server error)
   2  token invalid or expired - run: arcq token set or arcq token refresh
+
+Layer arguments:
+  query, fields, and use all accept the same three forms, in this order:
+    1. a key from "layers" in the config      arcq query parcels "1=1"
+    2. <service>:<id> from "services"         arcq query my-service:0 "1=1"
+    3. a raw layer URL                        arcq query https://.../FeatureServer/0 "1=1"
 
 Examples:
   arcq refresh && arcq sync
