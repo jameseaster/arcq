@@ -1,6 +1,6 @@
 import * as chai from 'chai';
 import fs from 'fs';
-import { getToken, loadTokenMeta } from '../lib/token-core.js';
+import { getToken, loadTokenMeta, saveTokenMeta } from '../lib/token-core.js';
 import { ArcqError } from '../lib/errors.js';
 import {
   loadOAuth,
@@ -170,6 +170,23 @@ describe('oauth-core', () => {
       const meta = loadTokenMeta();
       expect(meta).to.not.be.null;
       expect(meta!.expires).to.be.at.least(before + 1800 * 1000);
+    });
+
+    it('records the minting portal as the token host', async () => {
+      saveOAuth(config);
+      await performRefresh({
+        request: fakeRequest({ access_token: 'fresh-token', expires_in: 60 }),
+      });
+      expect(loadTokenMeta()!.host).to.equal('portal.example.com');
+    });
+
+    it('replaces a stale host rather than carrying it forward', async () => {
+      saveTokenMeta({ expires: 1, host: 'old.example.com' });
+      saveOAuth(config);
+      await performRefresh({
+        request: fakeRequest({ access_token: 'fresh-token', expires_in: 60 }),
+      });
+      expect(loadTokenMeta()!.host).to.equal('portal.example.com');
     });
 
     it('sends client_id, grant_type, and the stored refresh token', async () => {
