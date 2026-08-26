@@ -1,5 +1,5 @@
-import { getToken, setTokenValue } from './token-core.js';
-import { loadOAuth, loadTokenMeta } from './oauth-core.js';
+import { getToken, loadTokenMeta, setTokenValue } from './token-core.js';
+import { loadOAuth } from './oauth-core.js';
 import { ArcqError } from './errors.js';
 import { makePrompter } from './prompt-core.js';
 import tokenConnectCmd from './token-connect-cmd.js';

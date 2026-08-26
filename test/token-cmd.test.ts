@@ -1,7 +1,7 @@
 import * as chai from 'chai';
 import fs from 'fs';
-import { setTokenValue } from '../lib/token-core.js';
-import { saveOAuth, saveTokenMeta } from '../lib/oauth-core.js';
+import { saveTokenMeta, setTokenValue } from '../lib/token-core.js';
+import { saveOAuth } from '../lib/oauth-core.js';
 import tokenCmd from '../lib/token-cmd.js';
 import { resolveTokenPath } from '../lib/paths-core.js';
 import { useTempStateDir } from './state-dir.js';
