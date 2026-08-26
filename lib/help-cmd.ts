@@ -17,7 +17,10 @@ Usage:
   arcq list <service>                List layers/tables in a service or URL
   arcq layers                        List named layers in the config (--names for keys only)
   arcq services add <name> <url>     Add a named service to the config
-  arcq token set [<token>]           Save an auth token (prompts when omitted)
+  arcq token set [<token>] [--host <host>]
+                                     Save an auth token (prompts when omitted); --host
+                                     binds it to one host (inferred from the config
+                                     when every service shares one)
   arcq token show                    Print the stored token, its expiry, and refresh status
   arcq token connect                 Set up OAuth refresh from an esriJSAPIOAuth blob or refresh token
   arcq token connect --command <cmd> Set up OAuth refresh via a credential-helper command
@@ -29,6 +32,15 @@ Global flags:
   --insecure                         Disable TLS certificate verification for arcq's own requests
                                      (trusted self-signed servers only; prints a stderr warning).
                                      Also settable via ARCQ_INSECURE=1 or "insecure": true in the config.
+  --allow-cross-host                 Send the stored token even to a host it was not issued for
+                                     (prints a stderr warning). Also settable via
+                                     ARCQ_ALLOW_CROSS_HOST=1 or "allowCrossHost": true in the config.
+
+Token host binding:
+  A token records the host it was issued for - from the portal on token connect
+  and token refresh, or from token set --host. arcq then omits it on requests to
+  any other host and continues anonymously, so a portal credential is never
+  handed to an unrelated server. arcq token show reports the bound host.
 
 Query flags:
   -q, --quiet                        Suppress the query summary (layer/where/endpoint) on stderr

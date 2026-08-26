@@ -92,6 +92,20 @@ query/list/fields commands auto-refresh once on an exit-2 before giving up.
 (never the refresh token itself). Use `example.com` hosts and placeholder ids
 when demonstrating this to a user.
 
+## Token host binding
+
+The stored token is bound to the host it was issued for. On a request to any
+other host arcq omits the token and continues anonymously, printing
+`[arcq] omitting the token: it was issued for <host>, not <other>` on stderr.
+That line is the binding working, not a failure - if the service is public the
+command still succeeds. If the user genuinely needs one token across hosts,
+tell them about `--allow-cross-host` (or `ARCQ_ALLOW_CROSS_HOST=1`, or
+`"allowCrossHost": true`); do not reach for it just to silence the message.
+
+A token with no recorded host draws a one-time hint instead and is still sent -
+that means it predates the binding, and `arcq token set --host <host>` or
+`arcq token connect` fixes it. `arcq token show` reports the bound host.
+
 ## State directory
 
 arcq's config, context, cache, token, OAuth credential, and token-expiry files
