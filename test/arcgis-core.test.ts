@@ -53,13 +53,22 @@ describe('arcgis-core', () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 
+  let errs: string[];
+  let originalError: typeof console.error;
+
   beforeEach(() => {
     lastRequest = null;
     lastBody = null;
+    // Notices are per-invocation and this process runs many; reset so each
+    // test sees them fresh, and capture so they stay out of the test report.
     resetBindingNotices();
+    errs = [];
+    originalError = console.error;
+    console.error = (...args) => errs.push(args.join(' '));
   });
 
   afterEach(() => {
+    console.error = originalError;
     resetBindingNotices();
   });
 
@@ -338,19 +347,6 @@ describe('arcgis-core', () => {
   // postForm is the single choke point every arcq request passes through, so
   // the token-host binding is enforced there and asserted here.
   describe('token host binding', () => {
-    let errs: string[];
-    let originalError: typeof console.error;
-
-    beforeEach(() => {
-      errs = [];
-      originalError = console.error;
-      console.error = (...args) => errs.push(args.join(' '));
-    });
-
-    afterEach(() => {
-      console.error = originalError;
-    });
-
     it('sends the token when the target is the host it was issued for', async () => {
       saveTokenMeta({ expires: 1, host: '127.0.0.1' });
       respond({ name: 'ok' });
