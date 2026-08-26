@@ -2,9 +2,13 @@ import * as chai from 'chai';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { run, resolveInsecure } from '../index.js';
+import { run, resolveInsecure, resolveAllowCrossHost } from '../index.js';
 import { getHttpsAgent } from '../lib/tls-core.js';
 import { ArcqError } from '../lib/errors.js';
+import {
+  isCrossHostAllowed,
+  resetBindingNotices,
+} from '../lib/token-binding.js';
 import { useTempStateDir } from './state-dir.js';
 
 const { expect } = chai;
@@ -183,6 +187,83 @@ describe('index', () => {
       expect((thrown as ArcqError).message).to.include(
         "unknown flag '--bogus'"
       );
+    });
+  });
+
+  // Mirrors the --insecure precedence exactly; the two flags are deliberately
+  // the same shape so one is not a special case of the other.
+  describe('--allow-cross-host resolution', () => {
+    let envConfig: string | undefined;
+    let envAllow: string | undefined;
+
+    beforeEach(() => {
+      envConfig = process.env.ARCQ_CONFIG;
+      envAllow = process.env.ARCQ_ALLOW_CROSS_HOST;
+      process.env.ARCQ_CONFIG = TEMP_CONFIG;
+      fs.writeFileSync(TEMP_CONFIG, '{}');
+      delete process.env.ARCQ_ALLOW_CROSS_HOST;
+      resetBindingNotices();
+    });
+
+    afterEach(() => {
+      if (envConfig === undefined) delete process.env.ARCQ_CONFIG;
+      else process.env.ARCQ_CONFIG = envConfig;
+      if (envAllow === undefined) delete process.env.ARCQ_ALLOW_CROSS_HOST;
+      else process.env.ARCQ_ALLOW_CROSS_HOST = envAllow;
+      if (fs.existsSync(TEMP_CONFIG)) fs.unlinkSync(TEMP_CONFIG);
+      resetBindingNotices();
+    });
+
+    it('enforces the binding by default and strips no args', () => {
+      const { allowCrossHost, args } = resolveAllowCrossHost(['query', '1=1']);
+      expect(allowCrossHost).to.equal(false);
+      expect(args).to.deep.equal(['query', '1=1']);
+    });
+
+    it('allows via the --allow-cross-host flag and strips it', () => {
+      const { allowCrossHost, args } = resolveAllowCrossHost([
+        '--allow-cross-host',
+        'layer',
+        '1=1',
+      ]);
+      expect(allowCrossHost).to.equal(true);
+      expect(args).to.deep.equal(['layer', '1=1']);
+    });
+
+    it('allows via ARCQ_ALLOW_CROSS_HOST=1', () => {
+      process.env.ARCQ_ALLOW_CROSS_HOST = '1';
+      expect(resolveAllowCrossHost(['query']).allowCrossHost).to.equal(true);
+    });
+
+    it('allows via ARCQ_ALLOW_CROSS_HOST=true', () => {
+      process.env.ARCQ_ALLOW_CROSS_HOST = 'true';
+      expect(resolveAllowCrossHost(['query']).allowCrossHost).to.equal(true);
+    });
+
+    it('ignores other ARCQ_ALLOW_CROSS_HOST values', () => {
+      process.env.ARCQ_ALLOW_CROSS_HOST = '0';
+      expect(resolveAllowCrossHost(['query']).allowCrossHost).to.equal(false);
+    });
+
+    it('allows via config "allowCrossHost": true', () => {
+      fs.writeFileSync(TEMP_CONFIG, JSON.stringify({ allowCrossHost: true }));
+      expect(resolveAllowCrossHost(['query']).allowCrossHost).to.equal(true);
+    });
+
+    it('ignores a non-boolean config allowCrossHost value', () => {
+      fs.writeFileSync(TEMP_CONFIG, JSON.stringify({ allowCrossHost: 'yes' }));
+      expect(resolveAllowCrossHost(['query']).allowCrossHost).to.equal(false);
+    });
+
+    it('run() arms the override and does not treat the flag as a command', async () => {
+      await run(['--allow-cross-host', 'version']);
+      expect(isCrossHostAllowed()).to.equal(true);
+      expect(logs.join(' ')).to.match(/^\d+\.\d+\.\d+$/);
+    });
+
+    it('run() leaves the binding enforced without the flag', async () => {
+      await run(['version']);
+      expect(isCrossHostAllowed()).to.equal(false);
     });
   });
 });
